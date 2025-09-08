@@ -12,7 +12,20 @@
           "package_name": "dev.devlet.noteai"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "249255367479-8aku3vludbrbnnv06m2ijrjdcvnghcrv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.devlet.noteai",
+            "certificate_hash": "f3d58b0eb1a7760a33a7fe974163f301cc4f344d"
+          }
+        },
+        {
+          "client_id": "249255367479-h0krkkinqbn1nkvcnq2et14r34s7lotv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDTm7lXjHzO3MIqWf-uBw0Cp_iShNOJEWs"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249255367479-h0krkkinqbn1nkvcnq2et14r34s7lotv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "249255367479-ea767k77sdv6nqk50dig5nbmu9qq7m3t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dev.devlet.noteai"
+              }
+            }
+          ]
         }
       }
     }

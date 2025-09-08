@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../../../domain/usecases/auth/sign_in_with_google.dart';
 import '../../../../domain/usecases/usecase.dart';
+import '../../../../domain/entities/user.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -35,8 +36,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     final user = _firebaseAuth.currentUser;
     if (user != null) {
-      // TODO: Fetch user data from repository
-      emit(AuthUnauthenticated());
+      // User is already signed in, emit authenticated state
+      final tempUser = User(
+        id: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? '',
+        photoUrl: user.photoURL,
+        createdAt: DateTime.now(),
+        preferences: const UserPreferences(
+          name: 'AI Assistant',
+          role: 'lecture assistant',
+          summaryStyle: 'concise',
+          autoTranscribe: true,
+          autoSummarize: true,
+          language: 'en',
+        ),
+      );
+      emit(AuthAuthenticated(tempUser));
     } else {
       emit(AuthUnauthenticated());
     }
@@ -72,10 +88,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onUserChanged(
     AuthUserChanged event,
     Emitter<AuthState> emit,
-  ) {
+  ) async {
     if (event.userId != null) {
-      // TODO: Fetch user data from repository
-      emit(AuthUnauthenticated());
+      // User is signed in, emit authenticated state
+      emit(AuthLoading());
+      
+      // Get current Firebase user
+      final firebaseUser = _firebaseAuth.currentUser;
+      if (firebaseUser != null) {
+        final tempUser = User(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          displayName: firebaseUser.displayName ?? '',
+          photoUrl: firebaseUser.photoURL,
+          createdAt: DateTime.now(),
+          preferences: const UserPreferences(
+            name: 'AI Assistant',
+            role: 'lecture assistant',
+            summaryStyle: 'concise',
+            autoTranscribe: true,
+            autoSummarize: true,
+            language: 'en',
+          ),
+        );
+        emit(AuthAuthenticated(tempUser));
+      } else {
+        emit(AuthUnauthenticated());
+      }
     } else {
       emit(AuthUnauthenticated());
     }

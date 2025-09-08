@@ -31,6 +31,9 @@ dependencies:
   flutter_sound: ^9.28.0
   permission_handler: ^12.0.1
   
+  # Background Processing
+  # workmanager: ^0.5.2  # Temporarily disabled due to build issues
+  
   # Network & Connectivity
   connectivity_plus: ^6.1.5
   http: ^1.5.0

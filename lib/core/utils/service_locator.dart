@@ -9,6 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import '../network/network_info.dart';
 import '../../data/datasources/local/realm_datasource.dart';
 import '../../data/datasources/local/audio_recording_service.dart';
+import '../../data/datasources/local/background_recording_service.dart';
+import '../../data/datasources/local/offline_task_queue.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
 import '../../data/repositories/recording_repository_impl.dart';
@@ -40,6 +42,8 @@ Future<void> init() async {
   // Data Sources
   sl.registerLazySingleton<RealmDataSource>(() => RealmDataSourceImpl());
   sl.registerLazySingleton<AudioRecordingService>(() => AudioRecordingService());
+  sl.registerLazySingleton<BackgroundRecordingService>(() => BackgroundRecordingService());
+  sl.registerLazySingleton<OfflineTaskQueue>(() => OfflineTaskQueue());
   sl.registerLazySingleton<FirebaseDataSource>(
     () => FirebaseDataSourceImpl(sl(), sl()),
   );

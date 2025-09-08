@@ -20,10 +20,64 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> signInWithGoogle() async {
     try {
-      // TODO: Implement Google Sign-In logic
-      throw UnimplementedError();
+      // Trigger the authentication flow
+      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      // Create a new credential
+      final credential = firebase_auth.GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final firebase_auth.UserCredential userCredential = 
+          await firebaseAuth.signInWithCredential(credential);
+      
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) {
+        return Left(AuthFailure('Failed to sign in with Google'));
+      }
+
+      // Create User entity
+      final user = User(
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName ?? '',
+        photoUrl: firebaseUser.photoURL,
+        createdAt: DateTime.now(),
+        preferences: UserPreferences(
+          name: 'AI Assistant',
+          role: 'lecture assistant',
+          summaryStyle: 'concise',
+          autoTranscribe: true,
+          autoSummarize: true,
+          language: 'en',
+        ),
+      );
+
+      // Save user data to Firestore
+      await firestore.collection('users').doc(firebaseUser.uid).set({
+        'id': user.id,
+        'email': user.email,
+        'displayName': user.displayName,
+        'photoUrl': user.photoUrl,
+        'preferences': {
+          'name': user.preferences.name,
+          'role': user.preferences.role,
+          'summaryStyle': user.preferences.summaryStyle,
+          'autoTranscribe': user.preferences.autoTranscribe,
+          'autoSummarize': user.preferences.autoSummarize,
+          'language': user.preferences.language,
+        },
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return Right(user);
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(AuthFailure('Google Sign-In failed: ${e.toString()}'));
     }
   }
   
@@ -48,10 +102,67 @@ class AuthRepositoryImpl implements AuthRepository {
         return const Right(null);
       }
       
-      // TODO: Fetch user data from Firestore
-      throw UnimplementedError();
+      // Fetch user data from Firestore
+      final doc = await firestore.collection('users').doc(firebaseUser.uid).get();
+      
+      if (!doc.exists) {
+        // If user document doesn't exist, create it
+        final user = User(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          displayName: firebaseUser.displayName ?? '',
+          photoUrl: firebaseUser.photoURL,
+          createdAt: DateTime.now(),
+          preferences: UserPreferences(
+            name: 'AI Assistant',
+            role: 'lecture assistant',
+            summaryStyle: 'concise',
+            autoTranscribe: true,
+            autoSummarize: true,
+            language: 'en',
+          ),
+        );
+        
+        await firestore.collection('users').doc(firebaseUser.uid).set({
+          'id': user.id,
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoUrl': user.photoUrl,
+          'preferences': {
+            'name': user.preferences.name,
+            'role': user.preferences.role,
+            'summaryStyle': user.preferences.summaryStyle,
+            'autoTranscribe': user.preferences.autoTranscribe,
+            'autoSummarize': user.preferences.autoSummarize,
+            'language': user.preferences.language,
+          },
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        
+        return Right(user);
+      }
+      
+      final data = doc.data()!;
+      final user = User(
+        id: data['id'],
+        email: data['email'],
+        displayName: data['displayName'],
+        photoUrl: data['photoUrl'],
+        createdAt: (data['createdAt'] as Timestamp).toDate(),
+        preferences: UserPreferences(
+          name: data['preferences']['name'] ?? 'AI Assistant',
+          role: data['preferences']['role'] ?? 'lecture assistant',
+          summaryStyle: data['preferences']['summaryStyle'] ?? 'concise',
+          autoTranscribe: data['preferences']['autoTranscribe'] ?? true,
+          autoSummarize: data['preferences']['autoSummarize'] ?? true,
+          language: data['preferences']['language'] ?? 'en',
+        ),
+      );
+      
+      return Right(user);
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(AuthFailure('Failed to get current user: ${e.toString()}'));
     }
   }
   

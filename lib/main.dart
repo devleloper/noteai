@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
 import 'core/utils/service_locator.dart' as di;
@@ -26,6 +27,11 @@ void main() async {
   
   // Initialize dependency injection
   await di.init();
+  
+  // Initialize GoogleSignIn
+  await GoogleSignIn.instance.initialize(
+    // serverClientId will be read from google-services.json automatically
+  );
   
   runApp(const NoteAIApp());
 }
@@ -78,6 +84,26 @@ class AuthWrapper extends StatelessWidget {
           );
         } else if (state is AuthAuthenticated) {
           return const HomeScreen();
+        } else if (state is AuthError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${state.message}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<AuthBloc>().add(AuthCheckRequested());
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
         } else {
           return const LoginScreen();
         }
