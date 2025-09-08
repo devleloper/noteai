@@ -22,7 +22,7 @@ void main() async {
   );
   
   // Load environment variables
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: '.env');
   
   // Initialize dependency injection
   await di.init();
