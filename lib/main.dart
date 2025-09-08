@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'firebase_options.dart';
 import 'core/utils/service_locator.dart' as di;
 import 'presentation/features/home/view/home_screen.dart';
 import 'presentation/features/auth/view/login_screen.dart';
@@ -16,7 +17,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // Load environment variables
   await dotenv.load(fileName: ".env");
