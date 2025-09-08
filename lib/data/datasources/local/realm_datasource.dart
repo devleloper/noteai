@@ -1,5 +1,7 @@
 import 'package:realm/realm.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/recording_model.dart';
+import '../../models/realm_models.dart';
 import '../../../core/errors/exceptions.dart';
 
 abstract class RealmDataSource {
@@ -9,6 +11,7 @@ abstract class RealmDataSource {
   Future<void> deleteRecording(String id);
   Future<void> updateRecording(RecordingModel recording);
   Future<void> initialize();
+  Future<void> close();
 }
 
 class RealmDataSourceImpl implements RealmDataSource {
@@ -17,9 +20,16 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<void> initialize() async {
     try {
-      // For now, we'll use a simple in-memory approach
-      // In a real implementation, this would initialize Realm with proper schema
-      _realm = null; // Placeholder
+      // Get application documents directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final realmPath = '${appDir.path}/noteai.realm';
+      
+      // Initialize Realm with schema
+      final config = Configuration.local([
+        RecordingRealm.schema,
+      ], path: realmPath);
+      
+      _realm = Realm(config);
     } catch (e) {
       throw CacheException('Failed to initialize Realm: $e');
     }
@@ -28,9 +38,14 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<void> saveRecording(RecordingModel recording) async {
     try {
-      // TODO: Implement Realm save operation
-      // For now, we'll simulate the operation
-      await Future.delayed(const Duration(milliseconds: 100));
+      if (_realm == null) {
+        await initialize();
+      }
+      
+      final realmRecording = RecordingRealmExtension.fromEntity(recording.toEntity());
+      _realm!.write(() {
+        _realm!.add(realmRecording);
+      });
     } catch (e) {
       throw CacheException('Failed to save recording: $e');
     }
@@ -39,10 +54,14 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<List<RecordingModel>> getRecordings() async {
     try {
-      // TODO: Implement Realm query operation
-      // For now, return empty list
-      await Future.delayed(const Duration(milliseconds: 100));
-      return [];
+      if (_realm == null) {
+        await initialize();
+      }
+      
+      final realmRecordings = _realm!.all<RecordingRealm>();
+      return realmRecordings.map((realm) => 
+        RecordingModel.fromEntity(realm.toEntity())
+      ).toList();
     } catch (e) {
       throw CacheException('Failed to get recordings: $e');
     }
@@ -51,9 +70,14 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<RecordingModel?> getRecording(String id) async {
     try {
-      // TODO: Implement Realm query by ID operation
-      await Future.delayed(const Duration(milliseconds: 100));
-      return null;
+      if (_realm == null) {
+        await initialize();
+      }
+      
+      final realmRecording = _realm!.find<RecordingRealm>(id);
+      if (realmRecording == null) return null;
+      
+      return RecordingModel.fromEntity(realmRecording.toEntity());
     } catch (e) {
       throw CacheException('Failed to get recording: $e');
     }
@@ -62,8 +86,16 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<void> deleteRecording(String id) async {
     try {
-      // TODO: Implement Realm delete operation
-      await Future.delayed(const Duration(milliseconds: 100));
+      if (_realm == null) {
+        await initialize();
+      }
+      
+      final realmRecording = _realm!.find<RecordingRealm>(id);
+      if (realmRecording != null) {
+        _realm!.write(() {
+          _realm!.delete(realmRecording);
+        });
+      }
     } catch (e) {
       throw CacheException('Failed to delete recording: $e');
     }
@@ -72,10 +104,36 @@ class RealmDataSourceImpl implements RealmDataSource {
   @override
   Future<void> updateRecording(RecordingModel recording) async {
     try {
-      // TODO: Implement Realm update operation
-      await Future.delayed(const Duration(milliseconds: 100));
+      if (_realm == null) {
+        await initialize();
+      }
+      
+      final realmRecording = _realm!.find<RecordingRealm>(recording.id);
+      if (realmRecording != null) {
+        _realm!.write(() {
+          realmRecording.title = recording.title;
+          realmRecording.audioPath = recording.audioPath;
+          realmRecording.durationMs = recording.duration.inMilliseconds;
+          realmRecording.updatedAt = DateTime.now();
+          realmRecording.recordingStatus = recording.status;
+          realmRecording.progress = recording.progress;
+          realmRecording.transcript = recording.transcript;
+          realmRecording.summary = recording.summary;
+          realmRecording.isSynced = recording.isSynced;
+        });
+      }
     } catch (e) {
       throw CacheException('Failed to update recording: $e');
+    }
+  }
+  
+  @override
+  Future<void> close() async {
+    try {
+      _realm?.close();
+      _realm = null;
+    } catch (e) {
+      throw CacheException('Failed to close Realm: $e');
     }
   }
 }
