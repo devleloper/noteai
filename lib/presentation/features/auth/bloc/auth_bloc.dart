@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../../../domain/usecases/auth/sign_in_with_google.dart';
+import '../../../../domain/usecases/auth/get_current_user.dart';
 import '../../../../domain/usecases/usecase.dart';
 import '../../../../domain/entities/user.dart';
 import 'auth_event.dart';
@@ -8,12 +9,15 @@ import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignInWithGoogle _signInWithGoogle;
+  final GetCurrentUser _getCurrentUser;
   final firebase_auth.FirebaseAuth _firebaseAuth;
   
   AuthBloc({
     required SignInWithGoogle signInWithGoogle,
+    required GetCurrentUser getCurrentUser,
     required firebase_auth.FirebaseAuth firebaseAuth,
   }) : _signInWithGoogle = signInWithGoogle,
+       _getCurrentUser = getCurrentUser,
        _firebaseAuth = firebaseAuth,
        super(AuthInitial()) {
     
@@ -36,23 +40,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     final user = _firebaseAuth.currentUser;
     if (user != null) {
-      // User is already signed in, emit authenticated state
-      final tempUser = User(
-        id: user.uid,
-        email: user.email ?? '',
-        displayName: user.displayName ?? '',
-        photoUrl: user.photoURL,
-        createdAt: DateTime.now(),
-        preferences: const UserPreferences(
-          name: 'AI Assistant',
-          role: 'lecture assistant',
-          summaryStyle: 'concise',
-          autoTranscribe: true,
-          autoSummarize: true,
-          language: 'en',
-        ),
+      // User is already signed in, get real user data
+      final result = await _getCurrentUser(NoParams());
+      result.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (userData) {
+          if (userData != null) {
+            emit(AuthAuthenticated(userData));
+          } else {
+            emit(AuthUnauthenticated());
+          }
+        },
       );
-      emit(AuthAuthenticated(tempUser));
     } else {
       emit(AuthUnauthenticated());
     }
@@ -90,31 +89,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     if (event.userId != null) {
-      // User is signed in, emit authenticated state
+      // User is signed in, get real user data
       emit(AuthLoading());
       
-      // Get current Firebase user
-      final firebaseUser = _firebaseAuth.currentUser;
-      if (firebaseUser != null) {
-        final tempUser = User(
-          id: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          displayName: firebaseUser.displayName ?? '',
-          photoUrl: firebaseUser.photoURL,
-          createdAt: DateTime.now(),
-          preferences: const UserPreferences(
-            name: 'AI Assistant',
-            role: 'lecture assistant',
-            summaryStyle: 'concise',
-            autoTranscribe: true,
-            autoSummarize: true,
-            language: 'en',
-          ),
-        );
-        emit(AuthAuthenticated(tempUser));
-      } else {
-        emit(AuthUnauthenticated());
-      }
+      final result = await _getCurrentUser(NoParams());
+      result.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (userData) {
+          if (userData != null) {
+            emit(AuthAuthenticated(userData));
+          } else {
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
     } else {
       emit(AuthUnauthenticated());
     }

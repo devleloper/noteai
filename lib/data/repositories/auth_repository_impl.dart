@@ -102,61 +102,21 @@ class AuthRepositoryImpl implements AuthRepository {
         return const Right(null);
       }
       
-      // Fetch user data from Firestore
-      final doc = await firestore.collection('users').doc(firebaseUser.uid).get();
-      
-      if (!doc.exists) {
-        // If user document doesn't exist, create it
-        final user = User(
-          id: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          displayName: firebaseUser.displayName ?? '',
-          photoUrl: firebaseUser.photoURL,
-          createdAt: DateTime.now(),
-          preferences: UserPreferences(
-            name: 'AI Assistant',
-            role: 'lecture assistant',
-            summaryStyle: 'concise',
-            autoTranscribe: true,
-            autoSummarize: true,
-            language: 'en',
-          ),
-        );
-        
-        await firestore.collection('users').doc(firebaseUser.uid).set({
-          'id': user.id,
-          'email': user.email,
-          'displayName': user.displayName,
-          'photoUrl': user.photoUrl,
-          'preferences': {
-            'name': user.preferences.name,
-            'role': user.preferences.role,
-            'summaryStyle': user.preferences.summaryStyle,
-            'autoTranscribe': user.preferences.autoTranscribe,
-            'autoSummarize': user.preferences.autoSummarize,
-            'language': user.preferences.language,
-          },
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        
-        return Right(user);
-      }
-      
-      final data = doc.data()!;
+      // Временно используем только Firebase Auth данные
+      // TODO: Включить Firestore после настройки правил
       final user = User(
-        id: data['id'],
-        email: data['email'],
-        displayName: data['displayName'],
-        photoUrl: data['photoUrl'],
-        createdAt: (data['createdAt'] as Timestamp).toDate(),
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName ?? '',
+        photoUrl: firebaseUser.photoURL,
+        createdAt: DateTime.now(),
         preferences: UserPreferences(
-          name: data['preferences']['name'] ?? 'AI Assistant',
-          role: data['preferences']['role'] ?? 'lecture assistant',
-          summaryStyle: data['preferences']['summaryStyle'] ?? 'concise',
-          autoTranscribe: data['preferences']['autoTranscribe'] ?? true,
-          autoSummarize: data['preferences']['autoSummarize'] ?? true,
-          language: data['preferences']['language'] ?? 'en',
+          name: firebaseUser.displayName ?? 'AI Assistant',
+          role: 'lecture assistant',
+          summaryStyle: 'concise',
+          autoTranscribe: true,
+          autoSummarize: true,
+          language: 'en',
         ),
       );
       

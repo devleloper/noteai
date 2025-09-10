@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/usecases/recording/start_recording.dart';
 import '../../../../domain/usecases/recording/stop_recording.dart';
 import '../../../../domain/usecases/recording/get_recordings.dart';
 import '../../../../domain/usecases/usecase.dart';
+import '../../../../data/datasources/local/audio_recording_service.dart';
+import '../../../../core/utils/service_locator.dart' as di;
 import 'recording_event.dart';
 import 'recording_state.dart';
 
@@ -10,6 +13,8 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   final StartRecording _startRecording;
   final StopRecording _stopRecording;
   final GetRecordings _getRecordings;
+  final AudioRecordingService _audioService;
+  StreamSubscription<RecordingData>? _recordingSubscription;
   
   RecordingBloc({
     required StartRecording startRecording,
@@ -18,6 +23,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   }) : _startRecording = startRecording,
        _stopRecording = stopRecording,
        _getRecordings = getRecordings,
+       _audioService = di.sl<AudioRecordingService>(),
        super(RecordingInitial()) {
     
     on<StartRecordingRequested>(_onStartRecordingRequested);
@@ -29,6 +35,12 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     on<RecordingProgressUpdated>(_onRecordingProgressUpdated);
   }
   
+  @override
+  Future<void> close() {
+    _recordingSubscription?.cancel();
+    return super.close();
+  }
+  
   void _onStartRecordingRequested(
     StartRecordingRequested event,
     Emitter<RecordingState> emit,
@@ -38,12 +50,26 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     final result = await _startRecording(StartRecordingParams(title: event.title));
     result.fold(
       (failure) => emit(RecordingError(failure.message)),
-      (recording) => emit(RecordingInProgress(
-        recordingId: recording.id,
-        title: recording.title,
-        duration: recording.duration,
-        amplitude: 0.0,
-      )),
+      (recording) {
+        // Start listening to recording stream for real-time updates
+        _recordingSubscription?.cancel();
+        _recordingSubscription = _audioService.recordingStream?.listen(
+          (recordingData) {
+            add(RecordingProgressUpdated(
+              recordingId: recording.id,
+              duration: recordingData.duration,
+              amplitude: recordingData.amplitude,
+            ));
+          },
+        );
+        
+        emit(RecordingInProgress(
+          recordingId: recording.id,
+          title: recording.title,
+          duration: recording.duration,
+          amplitude: 0.0,
+        ));
+      },
     );
   }
   
@@ -52,6 +78,9 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     Emitter<RecordingState> emit,
   ) async {
     emit(RecordingLoading());
+    
+    // Cancel recording stream subscription
+    _recordingSubscription?.cancel();
     
     final result = await _stopRecording(StopRecordingParams(recordingId: event.recordingId));
     result.fold(

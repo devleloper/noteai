@@ -46,6 +46,7 @@ class NoteAIApp extends StatelessWidget {
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(
             signInWithGoogle: di.sl(),
+            getCurrentUser: di.sl(),
             firebaseAuth: di.sl(),
           )..add(AuthCheckRequested()),
         ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -9,24 +10,19 @@ class AudioRecordingService {
   factory AudioRecordingService() => _instance;
   AudioRecordingService._internal();
 
-  FlutterSoundRecorder? _recorder;
-  FlutterSoundPlayer? _player;
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _player = AudioPlayer();
   String? _currentRecordingPath;
   StreamController<RecordingData>? _recordingController;
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
+  bool _isRecording = false;
 
-  bool get isRecording => _recorder?.isRecording ?? false;
-  bool get isPaused => _recorder?.isPaused ?? false;
+  bool get isRecording => _isRecording;
+  bool get isPaused => false; // Record package doesn't support pause
   Duration get recordingDuration => _recordingDuration;
 
   Future<void> initialize() async {
-    _recorder = FlutterSoundRecorder();
-    _player = FlutterSoundPlayer();
-    
-    await _recorder?.openRecorder();
-    await _player?.openPlayer();
-    
     // Request microphone permission
     await _requestMicrophonePermission();
   }
@@ -38,8 +34,14 @@ class AudioRecordingService {
 
   Future<String> startRecording(String title) async {
     try {
-      if (_recorder == null) {
-        await initialize();
+      // Check if already recording
+      if (_isRecording) {
+        throw RecordingException('Recording is already in progress');
+      }
+
+      // Check if recorder is available
+      if (!await _recorder.hasPermission()) {
+        throw RecordingException('Microphone permission not granted');
       }
 
       // Create recording directory
@@ -51,16 +53,23 @@ class AudioRecordingService {
 
       // Generate unique filename
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = '${title.replaceAll(' ', '_')}_$timestamp.aac';
+      final fileName = '${title.replaceAll(' ', '_')}_$timestamp.m4a';
       _currentRecordingPath = '${recordingsDir.path}/$fileName';
 
+      // Initialize recording stream BEFORE starting recording
+      _recordingController = StreamController<RecordingData>.broadcast();
+
       // Start recording
-      await _recorder?.startRecorder(
-        toFile: _currentRecordingPath,
-        codec: Codec.aacADTS,
-        bitRate: 128000,
-        sampleRate: 44100,
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: _currentRecordingPath!,
       );
+
+      _isRecording = true;
 
       // Start duration timer
       _recordingDuration = Duration.zero;
@@ -72,9 +81,6 @@ class AudioRecordingService {
         ));
       });
 
-      // Initialize recording stream
-      _recordingController = StreamController<RecordingData>.broadcast();
-
       return _currentRecordingPath!;
     } catch (e) {
       throw RecordingException('Failed to start recording: $e');
@@ -82,45 +88,27 @@ class AudioRecordingService {
   }
 
   Future<void> pauseRecording() async {
-    try {
-      if (_recorder?.isRecording == true) {
-        await _recorder?.pauseRecorder();
-        _recordingTimer?.cancel();
-      }
-    } catch (e) {
-      throw RecordingException('Failed to pause recording: $e');
-    }
+    // Record package doesn't support pause/resume
+    throw RecordingException('Pause/resume not supported by record package');
   }
 
   Future<void> resumeRecording() async {
-    try {
-      if (_recorder?.isPaused == true) {
-        await _recorder?.resumeRecorder();
-        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          _recordingDuration = Duration(seconds: timer.tick);
-          _recordingController?.add(RecordingData(
-            duration: _recordingDuration,
-            amplitude: _getRandomAmplitude(),
-          ));
-        });
-      }
-    } catch (e) {
-      throw RecordingException('Failed to resume recording: $e');
-    }
+    // Record package doesn't support pause/resume
+    throw RecordingException('Pause/resume not supported by record package');
   }
 
   Future<String> stopRecording() async {
     try {
-      if (_recorder?.isRecording == true || _recorder?.isPaused == true) {
-        await _recorder?.stopRecorder();
+      if (_isRecording) {
+        final path = await _recorder.stop();
         _recordingTimer?.cancel();
         _recordingController?.close();
         
-        final path = _currentRecordingPath!;
+        _isRecording = false;
         _currentRecordingPath = null;
         _recordingDuration = Duration.zero;
         
-        return path;
+        return path ?? _currentRecordingPath ?? '';
       }
       throw RecordingException('No active recording to stop');
     } catch (e) {
@@ -130,14 +118,7 @@ class AudioRecordingService {
 
   Future<void> playRecording(String filePath) async {
     try {
-      if (_player == null) {
-        await initialize();
-      }
-      
-      await _player?.startPlayer(
-        fromURI: filePath,
-        codec: Codec.aacADTS,
-      );
+      await _player.play(DeviceFileSource(filePath));
     } catch (e) {
       throw RecordingException('Failed to play recording: $e');
     }
@@ -145,7 +126,7 @@ class AudioRecordingService {
 
   Future<void> stopPlayback() async {
     try {
-      await _player?.stopPlayer();
+      await _player.stop();
     } catch (e) {
       throw RecordingException('Failed to stop playback: $e');
     }
@@ -162,10 +143,8 @@ class AudioRecordingService {
   Future<void> dispose() async {
     _recordingTimer?.cancel();
     await _recordingController?.close();
-    await _recorder?.closeRecorder();
-    await _player?.closePlayer();
-    _recorder = null;
-    _player = null;
+    await _recorder.dispose();
+    await _player.dispose();
   }
 }
 

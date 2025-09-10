@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/entities/recording.dart';
+import '../../../../data/datasources/local/audio_recording_service.dart';
+import '../../../../core/utils/service_locator.dart' as di;
 
 class RecordingCard extends StatelessWidget {
   final Recording recording;
@@ -89,8 +91,18 @@ class RecordingCard extends StatelessWidget {
                     context: context,
                     icon: Icons.play_arrow,
                     label: 'Play',
-                    onPressed: () {
-                      // TODO: Implement play functionality
+                    onPressed: () async {
+                      try {
+                        final audioService = di.sl<AudioRecordingService>();
+                        await audioService.playRecording(recording.audioPath);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to play recording: $e'),
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                        );
+                      }
                     },
                   ),
                   _buildActionButton(

@@ -23,6 +23,7 @@ import '../../domain/usecases/recording/start_recording.dart';
 import '../../domain/usecases/recording/stop_recording.dart';
 import '../../domain/usecases/recording/get_recordings.dart';
 import '../../domain/usecases/auth/sign_in_with_google.dart';
+import '../../domain/usecases/auth/get_current_user.dart';
 import '../../domain/usecases/ai/transcribe_audio.dart';
 
 final sl = GetIt.instance;
@@ -77,5 +78,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => StopRecording(sl()));
   sl.registerLazySingleton(() => GetRecordings(sl()));
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
+  sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => TranscribeAudio(sl()));
 }
