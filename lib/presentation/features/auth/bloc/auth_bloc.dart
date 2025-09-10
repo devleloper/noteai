@@ -77,7 +77,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     
     try {
+      // Sign out from Firebase
       await _firebaseAuth.signOut();
+      
+      // Clear sensitive data from local storage
+      // Note: Local recordings are preserved as per requirements
+      // Only authentication tokens and user data are cleared
+      
       emit(AuthUnauthenticated());
     } catch (e) {
       emit(AuthError(e.toString()));

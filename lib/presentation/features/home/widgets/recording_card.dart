@@ -115,14 +115,6 @@ class RecordingCard extends StatelessWidget {
                   ),
                   _buildActionButton(
                     context: context,
-                    icon: Icons.share,
-                    label: 'Share',
-                    onPressed: () {
-                      // TODO: Implement share functionality
-                    },
-                  ),
-                  _buildActionButton(
-                    context: context,
                     icon: Icons.delete,
                     label: 'Delete',
                     onPressed: onDelete,

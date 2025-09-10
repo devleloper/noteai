@@ -18,31 +18,87 @@ class FirebaseDataSourceImpl implements FirebaseDataSource {
   
   @override
   Future<void> uploadRecording(RecordingModel recording) async {
-    // TODO: Implement Firebase upload operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final docRef = firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(recording.id);
+    
+    await docRef.set(recording.toMap());
   }
   
   @override
   Future<List<RecordingModel>> getRecordings() async {
-    // TODO: Implement Firebase query operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final querySnapshot = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .orderBy('createdAt', descending: true)
+        .get();
+    
+    return querySnapshot.docs
+        .map((doc) => RecordingModel.fromMap(doc.data(), doc.id))
+        .toList();
   }
   
   @override
   Future<RecordingModel?> getRecording(String id) async {
-    // TODO: Implement Firebase query by ID operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final doc = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(id)
+        .get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+    
+    return RecordingModel.fromMap(doc.data()!, doc.id);
   }
   
   @override
   Future<void> deleteRecording(String id) async {
-    // TODO: Implement Firebase delete operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(id)
+        .delete();
   }
   
   @override
   Future<void> updateRecording(RecordingModel recording) async {
-    // TODO: Implement Firebase update operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(recording.id)
+        .update(recording.toMap());
   }
 }

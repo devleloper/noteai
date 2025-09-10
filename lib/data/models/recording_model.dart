@@ -83,4 +83,41 @@ class RecordingModel extends Recording {
       isSynced: isSynced,
     );
   }
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'audioPath': audioPath,
+      'duration': duration.inMilliseconds,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'status': status.name,
+      'progress': progress,
+      'transcript': transcript,
+      'summary': summary,
+      'isSynced': isSynced,
+    };
+  }
+  
+  factory RecordingModel.fromMap(Map<String, dynamic> map, String id) {
+    return RecordingModel(
+      id: id,
+      title: map['title'] as String,
+      audioPath: map['audioPath'] as String,
+      duration: Duration(milliseconds: map['duration'] as int),
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: map['updatedAt'] != null 
+          ? DateTime.parse(map['updatedAt'] as String) 
+          : null,
+      status: RecordingStatus.values.firstWhere(
+        (e) => e.name == map['status'],
+        orElse: () => RecordingStatus.completed,
+      ),
+      progress: (map['progress'] as num?)?.toDouble() ?? 0.0,
+      transcript: map['transcript'] as String?,
+      summary: map['summary'] as String?,
+      isSynced: map['isSynced'] as bool? ?? false,
+    );
+  }
 }

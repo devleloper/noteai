@@ -25,23 +25,6 @@ class StopRecordingRequested extends RecordingEvent {
   List<Object> get props => [recordingId];
 }
 
-class PauseRecordingRequested extends RecordingEvent {
-  final String recordingId;
-  
-  const PauseRecordingRequested(this.recordingId);
-  
-  @override
-  List<Object> get props => [recordingId];
-}
-
-class ResumeRecordingRequested extends RecordingEvent {
-  final String recordingId;
-  
-  const ResumeRecordingRequested(this.recordingId);
-  
-  @override
-  List<Object> get props => [recordingId];
-}
 
 class LoadRecordingsRequested extends RecordingEvent {}
 

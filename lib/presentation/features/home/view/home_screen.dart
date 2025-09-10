@@ -4,6 +4,8 @@ import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../recording/bloc/recording_state.dart';
 import '../../recording/view/recording_screen.dart';
+import '../../search/view/search_screen.dart';
+import '../../settings/view/settings_screen.dart';
 import '../widgets/recording_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,18 +31,32 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search functionality
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // TODO: Navigate to settings
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
           ),
         ],
       ),
-      body: BlocBuilder<RecordingBloc, RecordingState>(
+      body: BlocConsumer<RecordingBloc, RecordingState>(
+        listener: (context, state) {
+          if (state is RecordingCompleted) {
+            // Reload recordings when a recording is completed
+            context.read<RecordingBloc>().add(LoadRecordingsRequested());
+          }
+        },
         builder: (context, state) {
           if (state is RecordingLoading) {
             return const Center(

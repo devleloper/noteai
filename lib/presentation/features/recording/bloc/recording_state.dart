@@ -29,20 +29,6 @@ class RecordingInProgress extends RecordingState {
   List<Object> get props => [recordingId, title, duration, amplitude];
 }
 
-class RecordingPaused extends RecordingState {
-  final String recordingId;
-  final String title;
-  final Duration duration;
-  
-  const RecordingPaused({
-    required this.recordingId,
-    required this.title,
-    required this.duration,
-  });
-  
-  @override
-  List<Object> get props => [recordingId, title, duration];
-}
 
 class RecordingCompleted extends RecordingState {
   final Recording recording;

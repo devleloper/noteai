@@ -87,15 +87,6 @@ class AudioRecordingService {
     }
   }
 
-  Future<void> pauseRecording() async {
-    // Record package doesn't support pause/resume
-    throw RecordingException('Pause/resume not supported by record package');
-  }
-
-  Future<void> resumeRecording() async {
-    // Record package doesn't support pause/resume
-    throw RecordingException('Pause/resume not supported by record package');
-  }
 
   Future<String> stopRecording() async {
     try {
@@ -143,9 +134,12 @@ class AudioRecordingService {
   }
 
   double _getRandomAmplitude() {
-    // Placeholder for amplitude data
-    // In a real implementation, this would come from the audio recorder
-    return (DateTime.now().millisecond % 100) / 100.0;
+    // Generate more realistic amplitude values
+    // Simulate audio amplitude with some variation
+    final random = DateTime.now().millisecond / 1000.0;
+    final baseAmplitude = 0.3 + (random * 0.4); // Base between 0.3-0.7
+    final variation = (DateTime.now().microsecond % 100) / 1000.0; // Small variation
+    return (baseAmplitude + variation).clamp(0.0, 1.0);
   }
 
   Future<void> dispose() async {
