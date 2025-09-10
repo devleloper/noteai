@@ -58,7 +58,10 @@ class RecordingRepositoryImpl implements RecordingRepository {
   Future<Either<Failure, void>> stopRecording(String recordingId) async {
     try {
       // Stop audio recording
-      final audioPath = await audioService.stopRecording();
+      await audioService.stopRecording();
+      
+      // Get final duration before resetting
+      final finalDuration = audioService.finalRecordingDuration;
       
       // Get current recording from database
       final existingRecording = await localDataSource.getRecording(recordingId);
@@ -71,7 +74,7 @@ class RecordingRepositoryImpl implements RecordingRepository {
         id: existingRecording.id,
         title: existingRecording.title,
         audioPath: existingRecording.audioPath,
-        duration: audioService.recordingDuration,
+        duration: finalDuration,
         createdAt: existingRecording.createdAt,
         updatedAt: DateTime.now(),
         status: RecordingStatus.completed,
@@ -83,6 +86,9 @@ class RecordingRepositoryImpl implements RecordingRepository {
       
       // Save updated recording
       await localDataSource.updateRecording(updatedRecording);
+      
+      // Reset audio service state for next recording
+      audioService.resetRecordingState();
       
       return const Right(null);
     } catch (e) {

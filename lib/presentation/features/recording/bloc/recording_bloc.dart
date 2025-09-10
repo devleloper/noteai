@@ -61,6 +61,9 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
               amplitude: recordingData.amplitude,
             ));
           },
+          onError: (error) {
+            print('Recording stream error: $error');
+          },
         );
         
         emit(RecordingInProgress(
@@ -86,8 +89,20 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     result.fold(
       (failure) => emit(RecordingError(failure.message)),
       (_) {
-        // TODO: Load the completed recording
-        emit(RecordingInitial());
+        // Get the completed recording and emit RecordingCompleted state
+        _getRecordings(NoParams()).then((recordingsResult) {
+          recordingsResult.fold(
+            (failure) => emit(RecordingError(failure.message)),
+            (recordings) {
+              // Find the completed recording
+              final completedRecording = recordings.firstWhere(
+                (recording) => recording.id == event.recordingId,
+                orElse: () => recordings.first,
+              );
+              emit(RecordingCompleted(completedRecording));
+            },
+          );
+        });
       },
     );
   }
