@@ -40,7 +40,12 @@ class _RecordingScreenState extends State<RecordingScreen> {
               ),
             );
           } else if (state is RecordingCompleted) {
-            Navigator.of(context).pop();
+            // Add small delay to ensure RecordingsLoaded is processed before navigation
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted && Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            });
           }
         },
         builder: (context, state) {

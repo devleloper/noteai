@@ -130,10 +130,11 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
       orElse: () => recordings.first,
     );
     
-    emit(RecordingCompleted(completedRecording));
-    
-    // Also emit the updated recordings list
+    // Emit the updated recordings list first to ensure data is available
     emit(RecordingsLoaded(recordings));
+    
+    // Then emit the completion state
+    emit(RecordingCompleted(completedRecording));
     
     // Automatically start transcription if internet is available
     _startAutomaticTranscription(completedRecording.id);

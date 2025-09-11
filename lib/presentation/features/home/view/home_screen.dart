@@ -53,10 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: BlocConsumer<RecordingBloc, RecordingState>(
         listener: (context, state) {
-          if (state is RecordingCompleted) {
-            // Reload recordings when a recording is completed
-            context.read<RecordingBloc>().add(LoadRecordingsRequested());
-          }
+          // Remove redundant LoadRecordingsRequested call to prevent race condition
+          // The RecordingBloc already emits RecordingsLoaded after RecordingCompleted
         },
         builder: (context, state) {
           if (state is RecordingLoading) {

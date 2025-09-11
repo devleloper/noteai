@@ -21,6 +21,11 @@ class RecordingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug logging to track state updates
+    print('RecordingCard building for recording: ${recording.id}');
+    print('Transcription status: ${recording.transcriptionStatus}');
+    print('Has transcript: ${recording.transcript?.isNotEmpty ?? false}');
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -276,8 +281,12 @@ class RecordingCard extends StatelessWidget {
           onPressed: () {
             print('Transcription button pressed for recording: ${recording.id}');
             print('Current transcription status: ${recording.transcriptionStatus}');
+            print('Has transcript: ${recording.transcript?.isNotEmpty ?? false}');
+            print('Transcript length: ${recording.transcript?.length ?? 0}');
             
-            if (recording.transcriptionStatus == TranscriptionStatus.completed) {
+            // Check for completed transcription or existing transcript
+            if (recording.transcriptionStatus == TranscriptionStatus.completed || 
+                (recording.transcript?.isNotEmpty ?? false)) {
               // Navigate to transcription screen
               print('Navigating to transcription screen');
               Navigator.of(context).push(
