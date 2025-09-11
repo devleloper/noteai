@@ -8,6 +8,12 @@ abstract class FirebaseDataSource {
   Future<RecordingModel?> getRecording(String id);
   Future<void> deleteRecording(String id);
   Future<void> updateRecording(RecordingModel recording);
+  
+  // Chat session methods
+  Future<void> uploadChatSession(Map<String, dynamic> session);
+  Future<void> updateChatSession(String sessionId, Map<String, dynamic> session);
+  Future<void> deleteChatSession(String sessionId);
+  Future<Map<String, dynamic>?> getChatSession(String sessionId);
 }
 
 class FirebaseDataSourceImpl implements FirebaseDataSource {
@@ -100,5 +106,71 @@ class FirebaseDataSourceImpl implements FirebaseDataSource {
         .collection('recordings')
         .doc(recording.id)
         .update(recording.toMap());
+  }
+
+  @override
+  Future<void> uploadChatSession(Map<String, dynamic> session) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final docRef = firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(session['id']);
+    
+    await docRef.set(session);
+  }
+
+  @override
+  Future<void> updateChatSession(String sessionId, Map<String, dynamic> session) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .update(session);
+  }
+
+  @override
+  Future<void> deleteChatSession(String sessionId) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .delete();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getChatSession(String sessionId) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final doc = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .get();
+    
+    if (doc.exists) {
+      return doc.data();
+    }
+    return null;
   }
 }

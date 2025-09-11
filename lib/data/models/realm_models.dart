@@ -1,5 +1,7 @@
 import 'package:realm/realm.dart';
 import '../../domain/entities/recording.dart';
+import '../../domain/entities/chat_message.dart';
+import '../../domain/entities/chat_session.dart';
 
 part 'realm_models.realm.dart';
 
@@ -78,4 +80,30 @@ extension RecordingRealmExtension on RecordingRealm {
       transcriptionError: recording.transcriptionError,
     );
   }
+}
+
+// Chat Message Realm Model
+@RealmModel()
+class _ChatMessageRealm {
+  @PrimaryKey()
+  late String id;
+  late String sessionId;
+  late String type; // MessageType enum as string
+  late String content;
+  String? model;
+  late DateTime timestamp;
+  String? parentMessageId;
+  String? metadata; // JSON string for metadata
+}
+
+// Chat Session Realm Model
+@RealmModel()
+class _ChatSessionRealm {
+  @PrimaryKey()
+  late String id;
+  late String recordingId;
+  String? summary;
+  late String defaultModel;
+  late DateTime createdAt;
+  late DateTime updatedAt;
 }

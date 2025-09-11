@@ -52,6 +52,15 @@ class AITranscriptionException implements Exception {
   String toString() => 'AITranscriptionException: $message';
 }
 
+class AIException implements Exception {
+  final String message;
+  
+  const AIException(this.message);
+  
+  @override
+  String toString() => 'AIException: $message';
+}
+
 class AISummaryException implements Exception {
   final String message;
   

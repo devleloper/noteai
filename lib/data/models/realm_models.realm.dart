@@ -244,3 +244,280 @@ class RecordingRealm extends _RecordingRealm
   @override
   SchemaObject get objectSchema => RealmObjectBase.getSchema(this) ?? schema;
 }
+
+class ChatMessageRealm extends _ChatMessageRealm
+    with RealmEntity, RealmObjectBase, RealmObject {
+  ChatMessageRealm(
+    String id,
+    String sessionId,
+    String type,
+    String content,
+    DateTime timestamp, {
+    String? model,
+    String? parentMessageId,
+    String? metadata,
+  }) {
+    RealmObjectBase.set(this, 'id', id);
+    RealmObjectBase.set(this, 'sessionId', sessionId);
+    RealmObjectBase.set(this, 'type', type);
+    RealmObjectBase.set(this, 'content', content);
+    RealmObjectBase.set(this, 'model', model);
+    RealmObjectBase.set(this, 'timestamp', timestamp);
+    RealmObjectBase.set(this, 'parentMessageId', parentMessageId);
+    RealmObjectBase.set(this, 'metadata', metadata);
+  }
+
+  ChatMessageRealm._();
+
+  @override
+  String get id => RealmObjectBase.get<String>(this, 'id') as String;
+  @override
+  set id(String value) => RealmObjectBase.set(this, 'id', value);
+
+  @override
+  String get sessionId =>
+      RealmObjectBase.get<String>(this, 'sessionId') as String;
+  @override
+  set sessionId(String value) => RealmObjectBase.set(this, 'sessionId', value);
+
+  @override
+  String get type => RealmObjectBase.get<String>(this, 'type') as String;
+  @override
+  set type(String value) => RealmObjectBase.set(this, 'type', value);
+
+  @override
+  String get content => RealmObjectBase.get<String>(this, 'content') as String;
+  @override
+  set content(String value) => RealmObjectBase.set(this, 'content', value);
+
+  @override
+  String? get model => RealmObjectBase.get<String>(this, 'model') as String?;
+  @override
+  set model(String? value) => RealmObjectBase.set(this, 'model', value);
+
+  @override
+  DateTime get timestamp =>
+      RealmObjectBase.get<DateTime>(this, 'timestamp') as DateTime;
+  @override
+  set timestamp(DateTime value) =>
+      RealmObjectBase.set(this, 'timestamp', value);
+
+  @override
+  String? get parentMessageId =>
+      RealmObjectBase.get<String>(this, 'parentMessageId') as String?;
+  @override
+  set parentMessageId(String? value) =>
+      RealmObjectBase.set(this, 'parentMessageId', value);
+
+  @override
+  String? get metadata =>
+      RealmObjectBase.get<String>(this, 'metadata') as String?;
+  @override
+  set metadata(String? value) => RealmObjectBase.set(this, 'metadata', value);
+
+  @override
+  Stream<RealmObjectChanges<ChatMessageRealm>> get changes =>
+      RealmObjectBase.getChanges<ChatMessageRealm>(this);
+
+  @override
+  Stream<RealmObjectChanges<ChatMessageRealm>> changesFor([
+    List<String>? keyPaths,
+  ]) => RealmObjectBase.getChangesFor<ChatMessageRealm>(this, keyPaths);
+
+  @override
+  ChatMessageRealm freeze() =>
+      RealmObjectBase.freezeObject<ChatMessageRealm>(this);
+
+  EJsonValue toEJson() {
+    return <String, dynamic>{
+      'id': id.toEJson(),
+      'sessionId': sessionId.toEJson(),
+      'type': type.toEJson(),
+      'content': content.toEJson(),
+      'model': model.toEJson(),
+      'timestamp': timestamp.toEJson(),
+      'parentMessageId': parentMessageId.toEJson(),
+      'metadata': metadata.toEJson(),
+    };
+  }
+
+  static EJsonValue _toEJson(ChatMessageRealm value) => value.toEJson();
+  static ChatMessageRealm _fromEJson(EJsonValue ejson) {
+    if (ejson is! Map<String, dynamic>) return raiseInvalidEJson(ejson);
+    return switch (ejson) {
+      {
+        'id': EJsonValue id,
+        'sessionId': EJsonValue sessionId,
+        'type': EJsonValue type,
+        'content': EJsonValue content,
+        'timestamp': EJsonValue timestamp,
+      } =>
+        ChatMessageRealm(
+          fromEJson(id),
+          fromEJson(sessionId),
+          fromEJson(type),
+          fromEJson(content),
+          fromEJson(timestamp),
+          model: fromEJson(ejson['model']),
+          parentMessageId: fromEJson(ejson['parentMessageId']),
+          metadata: fromEJson(ejson['metadata']),
+        ),
+      _ => raiseInvalidEJson(ejson),
+    };
+  }
+
+  static final schema = () {
+    RealmObjectBase.registerFactory(ChatMessageRealm._);
+    register(_toEJson, _fromEJson);
+    return const SchemaObject(
+      ObjectType.realmObject,
+      ChatMessageRealm,
+      'ChatMessageRealm',
+      [
+        SchemaProperty('id', RealmPropertyType.string, primaryKey: true),
+        SchemaProperty('sessionId', RealmPropertyType.string),
+        SchemaProperty('type', RealmPropertyType.string),
+        SchemaProperty('content', RealmPropertyType.string),
+        SchemaProperty('model', RealmPropertyType.string, optional: true),
+        SchemaProperty('timestamp', RealmPropertyType.timestamp),
+        SchemaProperty(
+          'parentMessageId',
+          RealmPropertyType.string,
+          optional: true,
+        ),
+        SchemaProperty('metadata', RealmPropertyType.string, optional: true),
+      ],
+    );
+  }();
+
+  @override
+  SchemaObject get objectSchema => RealmObjectBase.getSchema(this) ?? schema;
+}
+
+class ChatSessionRealm extends _ChatSessionRealm
+    with RealmEntity, RealmObjectBase, RealmObject {
+  ChatSessionRealm(
+    String id,
+    String recordingId,
+    String defaultModel,
+    DateTime createdAt,
+    DateTime updatedAt, {
+    String? summary,
+  }) {
+    RealmObjectBase.set(this, 'id', id);
+    RealmObjectBase.set(this, 'recordingId', recordingId);
+    RealmObjectBase.set(this, 'summary', summary);
+    RealmObjectBase.set(this, 'defaultModel', defaultModel);
+    RealmObjectBase.set(this, 'createdAt', createdAt);
+    RealmObjectBase.set(this, 'updatedAt', updatedAt);
+  }
+
+  ChatSessionRealm._();
+
+  @override
+  String get id => RealmObjectBase.get<String>(this, 'id') as String;
+  @override
+  set id(String value) => RealmObjectBase.set(this, 'id', value);
+
+  @override
+  String get recordingId =>
+      RealmObjectBase.get<String>(this, 'recordingId') as String;
+  @override
+  set recordingId(String value) =>
+      RealmObjectBase.set(this, 'recordingId', value);
+
+  @override
+  String? get summary =>
+      RealmObjectBase.get<String>(this, 'summary') as String?;
+  @override
+  set summary(String? value) => RealmObjectBase.set(this, 'summary', value);
+
+  @override
+  String get defaultModel =>
+      RealmObjectBase.get<String>(this, 'defaultModel') as String;
+  @override
+  set defaultModel(String value) =>
+      RealmObjectBase.set(this, 'defaultModel', value);
+
+  @override
+  DateTime get createdAt =>
+      RealmObjectBase.get<DateTime>(this, 'createdAt') as DateTime;
+  @override
+  set createdAt(DateTime value) =>
+      RealmObjectBase.set(this, 'createdAt', value);
+
+  @override
+  DateTime get updatedAt =>
+      RealmObjectBase.get<DateTime>(this, 'updatedAt') as DateTime;
+  @override
+  set updatedAt(DateTime value) =>
+      RealmObjectBase.set(this, 'updatedAt', value);
+
+  @override
+  Stream<RealmObjectChanges<ChatSessionRealm>> get changes =>
+      RealmObjectBase.getChanges<ChatSessionRealm>(this);
+
+  @override
+  Stream<RealmObjectChanges<ChatSessionRealm>> changesFor([
+    List<String>? keyPaths,
+  ]) => RealmObjectBase.getChangesFor<ChatSessionRealm>(this, keyPaths);
+
+  @override
+  ChatSessionRealm freeze() =>
+      RealmObjectBase.freezeObject<ChatSessionRealm>(this);
+
+  EJsonValue toEJson() {
+    return <String, dynamic>{
+      'id': id.toEJson(),
+      'recordingId': recordingId.toEJson(),
+      'summary': summary.toEJson(),
+      'defaultModel': defaultModel.toEJson(),
+      'createdAt': createdAt.toEJson(),
+      'updatedAt': updatedAt.toEJson(),
+    };
+  }
+
+  static EJsonValue _toEJson(ChatSessionRealm value) => value.toEJson();
+  static ChatSessionRealm _fromEJson(EJsonValue ejson) {
+    if (ejson is! Map<String, dynamic>) return raiseInvalidEJson(ejson);
+    return switch (ejson) {
+      {
+        'id': EJsonValue id,
+        'recordingId': EJsonValue recordingId,
+        'defaultModel': EJsonValue defaultModel,
+        'createdAt': EJsonValue createdAt,
+        'updatedAt': EJsonValue updatedAt,
+      } =>
+        ChatSessionRealm(
+          fromEJson(id),
+          fromEJson(recordingId),
+          fromEJson(defaultModel),
+          fromEJson(createdAt),
+          fromEJson(updatedAt),
+          summary: fromEJson(ejson['summary']),
+        ),
+      _ => raiseInvalidEJson(ejson),
+    };
+  }
+
+  static final schema = () {
+    RealmObjectBase.registerFactory(ChatSessionRealm._);
+    register(_toEJson, _fromEJson);
+    return const SchemaObject(
+      ObjectType.realmObject,
+      ChatSessionRealm,
+      'ChatSessionRealm',
+      [
+        SchemaProperty('id', RealmPropertyType.string, primaryKey: true),
+        SchemaProperty('recordingId', RealmPropertyType.string),
+        SchemaProperty('summary', RealmPropertyType.string, optional: true),
+        SchemaProperty('defaultModel', RealmPropertyType.string),
+        SchemaProperty('createdAt', RealmPropertyType.timestamp),
+        SchemaProperty('updatedAt', RealmPropertyType.timestamp),
+      ],
+    );
+  }();
+
+  @override
+  SchemaObject get objectSchema => RealmObjectBase.getSchema(this) ?? schema;
+}

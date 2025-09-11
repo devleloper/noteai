@@ -17,6 +17,13 @@ abstract class RealmDataSource {
 class RealmDataSourceImpl implements RealmDataSource {
   Realm? _realm;
   
+  Realm get realm {
+    if (_realm == null) {
+      throw CacheException('Realm not initialized');
+    }
+    return _realm!;
+  }
+  
   @override
   Future<void> initialize() async {
     try {
@@ -27,6 +34,8 @@ class RealmDataSourceImpl implements RealmDataSource {
       // Initialize Realm with schema
       final config = Configuration.local([
         RecordingRealm.schema,
+        ChatSessionRealm.schema,
+        ChatMessageRealm.schema,
       ], path: realmPath);
       
       _realm = Realm(config);

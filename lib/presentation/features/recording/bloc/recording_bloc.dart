@@ -7,6 +7,9 @@ import '../../../../domain/usecases/recording/get_recordings.dart';
 import '../../../../domain/usecases/recording/delete_recording.dart';
 import '../../../../domain/usecases/transcription/start_transcription.dart';
 import '../../../../domain/usecases/transcription/update_transcription.dart';
+import '../../../../domain/usecases/chat/create_session.dart';
+import '../../../../domain/usecases/chat/generate_summary.dart';
+import '../../../../domain/repositories/chat_repository.dart';
 import '../../../../data/datasources/remote/transcription_service.dart';
 import '../../../../domain/entities/recording.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -23,6 +26,8 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   final DeleteRecording _deleteRecording;
   final StartTranscription _startTranscription;
   final UpdateTranscription _updateTranscription;
+  final CreateSession _createSession;
+  final GenerateSummary _generateSummary;
   final AudioRecordingService _audioService;
   final TranscriptionService _transcriptionService;
   StreamSubscription<RecordingData>? _recordingSubscription;
@@ -34,12 +39,16 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     required DeleteRecording deleteRecording,
     required StartTranscription startTranscription,
     required UpdateTranscription updateTranscription,
+    required CreateSession createSession,
+    required GenerateSummary generateSummary,
   }) : _startRecording = startRecording,
        _stopRecording = stopRecording,
        _getRecordings = getRecordings,
        _deleteRecording = deleteRecording,
        _startTranscription = startTranscription,
        _updateTranscription = updateTranscription,
+       _createSession = createSession,
+       _generateSummary = generateSummary,
        _audioService = di.sl<AudioRecordingService>(),
        _transcriptionService = di.sl<TranscriptionService>(),
        super(RecordingInitial()) {
@@ -236,6 +245,9 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
           transcript: event.transcript,
         ));
         
+        // Create chat session and generate summary
+        _createChatSessionAndSummary(event.recordingId, event.transcript);
+        
         // Reload recordings to show updated transcription
         add(LoadRecordingsRequested());
       },
@@ -396,5 +408,40 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
              message.contains('timeout');
     }
     return false;
+  }
+
+  void _createChatSessionAndSummary(String recordingId, String transcript) async {
+    try {
+      // Create chat session
+      final sessionResult = await _createSession(recordingId);
+      sessionResult.fold(
+        (failure) => print('Failed to create chat session: ${failure.message}'),
+        (session) {
+          print('Chat session created: ${session.id}');
+          
+          // Generate summary
+          _generateSummaryForSession(recordingId, transcript);
+        },
+      );
+    } catch (e) {
+      print('Error creating chat session: $e');
+    }
+  }
+
+  void _generateSummaryForSession(String recordingId, String transcript) async {
+    try {
+      final summaryResult = await _generateSummary(GenerateSummaryParams(
+        recordingId: recordingId,
+        transcript: transcript,
+        model: 'gpt-4o', // Default model for summaries
+      ));
+      
+      summaryResult.fold(
+        (failure) => print('Failed to generate summary: ${failure.message}'),
+        (summary) => print('Summary generated successfully'),
+      );
+    } catch (e) {
+      print('Error generating summary: $e');
+    }
   }
 }

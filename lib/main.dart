@@ -13,6 +13,8 @@ import 'presentation/features/auth/bloc/auth_event.dart';
 import 'presentation/features/auth/bloc/auth_state.dart';
 import 'presentation/features/recording/bloc/recording_bloc.dart';
 import 'presentation/theme/app_theme.dart';
+import 'domain/usecases/chat/create_session.dart';
+import 'domain/usecases/chat/generate_summary.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +60,8 @@ class NoteAIApp extends StatelessWidget {
             deleteRecording: di.sl(),
             startTranscription: di.sl(),
             updateTranscription: di.sl(),
+            createSession: di.sl<CreateSession>(),
+            generateSummary: di.sl<GenerateSummary>(),
           ),
         ),
       ],

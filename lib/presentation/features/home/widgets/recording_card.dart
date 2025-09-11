@@ -6,6 +6,7 @@ import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_state.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../transcription/view/transcription_screen.dart';
+import '../../chat/view/chat_screen.dart';
 
 class RecordingCard extends StatelessWidget {
   final Recording recording;
@@ -135,7 +136,11 @@ class RecordingCard extends StatelessWidget {
                     icon: Icons.chat,
                     label: 'AI Chat',
                     onPressed: () {
-                      // TODO: Navigate to AI chat
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(recordingId: recording.id),
+                        ),
+                      );
                     },
                   ),
                   _buildActionButton(

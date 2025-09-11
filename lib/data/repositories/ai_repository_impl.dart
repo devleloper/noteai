@@ -57,7 +57,7 @@ class AIRepositoryImpl implements AIRepository {
   Future<Either<Failure, String>> askQuestion(String recordingId, String question, List<ChatMessage> context) async {
     try {
       // Build context from chat messages
-      final contextText = context.map((msg) => '${msg.role}: ${msg.content}').join('\n');
+      final contextText = context.map((msg) => '${msg.type.name}: ${msg.content}').join('\n');
       final answer = await openAIDataSource.askQuestion(question, contextText);
       return Right(answer);
     } catch (e) {
