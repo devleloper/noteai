@@ -13,6 +13,9 @@ class RecordingModel extends Recording {
     super.transcript,
     super.summary,
     required super.isSynced,
+    required super.transcriptionStatus,
+    super.transcriptionCompletedAt,
+    super.transcriptionError,
   });
   
   factory RecordingModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,14 @@ class RecordingModel extends Recording {
       transcript: json['transcript'] as String?,
       summary: json['summary'] as String?,
       isSynced: json['isSynced'] as bool,
+      transcriptionStatus: TranscriptionStatus.values.firstWhere(
+        (e) => e.name == json['transcriptionStatus'],
+        orElse: () => TranscriptionStatus.notStarted,
+      ),
+      transcriptionCompletedAt: json['transcriptionCompletedAt'] != null
+          ? DateTime.parse(json['transcriptionCompletedAt'] as String)
+          : null,
+      transcriptionError: json['transcriptionError'] as String?,
     );
   }
   
@@ -49,6 +60,9 @@ class RecordingModel extends Recording {
       'transcript': transcript,
       'summary': summary,
       'isSynced': isSynced,
+      'transcriptionStatus': transcriptionStatus.name,
+      'transcriptionCompletedAt': transcriptionCompletedAt?.toIso8601String(),
+      'transcriptionError': transcriptionError,
     };
   }
   
@@ -65,6 +79,9 @@ class RecordingModel extends Recording {
       transcript: recording.transcript,
       summary: recording.summary,
       isSynced: recording.isSynced,
+      transcriptionStatus: recording.transcriptionStatus,
+      transcriptionCompletedAt: recording.transcriptionCompletedAt,
+      transcriptionError: recording.transcriptionError,
     );
   }
   
@@ -81,6 +98,9 @@ class RecordingModel extends Recording {
       transcript: transcript,
       summary: summary,
       isSynced: isSynced,
+      transcriptionStatus: transcriptionStatus,
+      transcriptionCompletedAt: transcriptionCompletedAt,
+      transcriptionError: transcriptionError,
     );
   }
   
@@ -97,6 +117,9 @@ class RecordingModel extends Recording {
       'transcript': transcript,
       'summary': summary,
       'isSynced': isSynced,
+      'transcriptionStatus': transcriptionStatus.name,
+      'transcriptionCompletedAt': transcriptionCompletedAt?.toIso8601String(),
+      'transcriptionError': transcriptionError,
     };
   }
   
@@ -118,6 +141,14 @@ class RecordingModel extends Recording {
       transcript: map['transcript'] as String?,
       summary: map['summary'] as String?,
       isSynced: map['isSynced'] as bool? ?? false,
+      transcriptionStatus: TranscriptionStatus.values.firstWhere(
+        (e) => e.name == map['transcriptionStatus'],
+        orElse: () => TranscriptionStatus.notStarted,
+      ),
+      transcriptionCompletedAt: map['transcriptionCompletedAt'] != null
+          ? DateTime.parse(map['transcriptionCompletedAt'] as String)
+          : null,
+      transcriptionError: map['transcriptionError'] as String?,
     );
   }
 }

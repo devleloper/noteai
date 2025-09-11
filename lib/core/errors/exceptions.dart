@@ -60,3 +60,12 @@ class AISummaryException implements Exception {
   @override
   String toString() => 'AISummaryException: $message';
 }
+
+class TranscriptionException implements Exception {
+  final String message;
+  
+  const TranscriptionException(this.message);
+  
+  @override
+  String toString() => 'TranscriptionException: $message';
+}

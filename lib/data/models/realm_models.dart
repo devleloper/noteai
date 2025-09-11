@@ -18,6 +18,9 @@ class _RecordingRealm {
   String? transcript;
   String? summary;
   late bool isSynced;
+  late String transcriptionStatus;
+  DateTime? transcriptionCompletedAt;
+  String? transcriptionError;
 }
 
 // Extension methods for the generated RecordingRealm class
@@ -27,6 +30,11 @@ extension RecordingRealmExtension on RecordingRealm {
   RecordingStatus get recordingStatus => RecordingStatus.values.firstWhere(
     (e) => e.name == status,
     orElse: () => RecordingStatus.completed,
+  );
+  
+  TranscriptionStatus get transcriptionStatusEnum => TranscriptionStatus.values.firstWhere(
+    (e) => e.name == transcriptionStatus,
+    orElse: () => TranscriptionStatus.notStarted,
   );
   
   set recordingStatus(RecordingStatus value) {
@@ -46,6 +54,9 @@ extension RecordingRealmExtension on RecordingRealm {
       transcript: transcript,
       summary: summary,
       isSynced: isSynced,
+      transcriptionStatus: transcriptionStatusEnum,
+      transcriptionCompletedAt: transcriptionCompletedAt,
+      transcriptionError: transcriptionError,
     );
   }
   
@@ -59,9 +70,12 @@ extension RecordingRealmExtension on RecordingRealm {
       recording.status.name,
       recording.progress,
       recording.isSynced,
+      recording.transcriptionStatus.name,
       updatedAt: recording.updatedAt,
       transcript: recording.transcript,
       summary: recording.summary,
+      transcriptionCompletedAt: recording.transcriptionCompletedAt,
+      transcriptionError: recording.transcriptionError,
     );
   }
 }

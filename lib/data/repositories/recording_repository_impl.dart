@@ -48,11 +48,40 @@ class RecordingRepositoryImpl implements RecordingRepository {
         status: RecordingStatus.recording,
         progress: 0.0,
         isSynced: false,
+        transcriptionStatus: TranscriptionStatus.notStarted,
       );
       
       // Save to local database
       final model = RecordingModel.fromEntity(recording);
       await localDataSource.saveRecording(model);
+      
+      // Sync to remote if online
+      if (await networkInfo.isConnected) {
+        try {
+          await remoteDataSource.uploadRecording(model);
+          // Update sync status
+          final syncedModel = RecordingModel(
+            id: model.id,
+            title: model.title,
+            audioPath: model.audioPath,
+            duration: model.duration,
+            createdAt: model.createdAt,
+            updatedAt: model.updatedAt,
+            status: model.status,
+            progress: model.progress,
+            transcript: model.transcript,
+            summary: model.summary,
+            isSynced: true,
+            transcriptionStatus: model.transcriptionStatus,
+            transcriptionCompletedAt: model.transcriptionCompletedAt,
+            transcriptionError: model.transcriptionError,
+          );
+          await localDataSource.updateRecording(syncedModel);
+        } catch (e) {
+          print('Failed to sync recording to remote: $e');
+          // Don't fail the operation, just log the error
+        }
+      }
       
       return Right(recording);
     } catch (e) {
@@ -88,10 +117,41 @@ class RecordingRepositoryImpl implements RecordingRepository {
         transcript: existingRecording.transcript,
         summary: existingRecording.summary,
         isSynced: existingRecording.isSynced,
+        transcriptionStatus: existingRecording.transcriptionStatus,
+        transcriptionCompletedAt: existingRecording.transcriptionCompletedAt,
+        transcriptionError: existingRecording.transcriptionError,
       );
       
       // Save updated recording
       await localDataSource.updateRecording(updatedRecording);
+      
+      // Sync to remote if online
+      if (await networkInfo.isConnected) {
+        try {
+          await remoteDataSource.updateRecording(updatedRecording);
+          // Update sync status
+          final syncedRecording = RecordingModel(
+            id: updatedRecording.id,
+            title: updatedRecording.title,
+            audioPath: updatedRecording.audioPath,
+            duration: updatedRecording.duration,
+            createdAt: updatedRecording.createdAt,
+            updatedAt: updatedRecording.updatedAt,
+            status: updatedRecording.status,
+            progress: updatedRecording.progress,
+            transcript: updatedRecording.transcript,
+            summary: updatedRecording.summary,
+            isSynced: true,
+            transcriptionStatus: updatedRecording.transcriptionStatus,
+            transcriptionCompletedAt: updatedRecording.transcriptionCompletedAt,
+            transcriptionError: updatedRecording.transcriptionError,
+          );
+          await localDataSource.updateRecording(syncedRecording);
+        } catch (e) {
+          print('Failed to sync recording update to remote: $e');
+          // Don't fail the operation, just log the error
+        }
+      }
       
       // Reset audio service state for next recording
       audioService.resetRecordingState();
@@ -212,5 +272,129 @@ class RecordingRepositoryImpl implements RecordingRepository {
     final date = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final time = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     return '$date | $time';
+  }
+  
+  @override
+  Future<Either<Failure, Recording>> startTranscription(String recordingId) async {
+    try {
+      // Get recording from local database
+      final recording = await localDataSource.getRecording(recordingId);
+      if (recording == null) {
+        return Left(RecordingFailure('Recording not found'));
+      }
+      
+      // Update transcription status to pending
+      final updatedRecording = RecordingModel(
+        id: recording.id,
+        title: recording.title,
+        audioPath: recording.audioPath,
+        duration: recording.duration,
+        createdAt: recording.createdAt,
+        updatedAt: DateTime.now(),
+        status: recording.status,
+        progress: recording.progress,
+        transcript: recording.transcript,
+        summary: recording.summary,
+        isSynced: recording.isSynced,
+        transcriptionStatus: TranscriptionStatus.pending,
+        transcriptionCompletedAt: recording.transcriptionCompletedAt,
+        transcriptionError: recording.transcriptionError,
+      );
+      
+      // Save to local database
+      await localDataSource.updateRecording(updatedRecording);
+      
+      return Right(updatedRecording.toEntity());
+    } catch (e) {
+      return Left(RecordingFailure('Failed to start transcription: $e'));
+    }
+  }
+  
+  @override
+  Future<Either<Failure, Recording>> updateTranscription(
+    String recordingId,
+    String? transcript,
+    TranscriptionStatus transcriptionStatus,
+    String? transcriptionError,
+  ) async {
+    try {
+      // Get recording from local database
+      final recording = await localDataSource.getRecording(recordingId);
+      if (recording == null) {
+        return Left(RecordingFailure('Recording not found'));
+      }
+      
+      // Update transcription data
+      final updatedRecording = RecordingModel(
+        id: recording.id,
+        title: recording.title,
+        audioPath: recording.audioPath,
+        duration: recording.duration,
+        createdAt: recording.createdAt,
+        updatedAt: DateTime.now(),
+        status: recording.status,
+        progress: recording.progress,
+        transcript: transcript,
+        summary: recording.summary,
+        isSynced: recording.isSynced,
+        transcriptionStatus: transcriptionStatus,
+        transcriptionCompletedAt: transcriptionStatus == TranscriptionStatus.completed 
+            ? DateTime.now() 
+            : recording.transcriptionCompletedAt,
+        transcriptionError: transcriptionError,
+      );
+      
+      // Save to local database
+      await localDataSource.updateRecording(updatedRecording);
+      
+      // Sync to remote if online
+      if (await networkInfo.isConnected) {
+        try {
+          await remoteDataSource.updateRecording(updatedRecording);
+          final syncedRecording = RecordingModel(
+            id: updatedRecording.id,
+            title: updatedRecording.title,
+            audioPath: updatedRecording.audioPath,
+            duration: updatedRecording.duration,
+            createdAt: updatedRecording.createdAt,
+            updatedAt: updatedRecording.updatedAt,
+            status: updatedRecording.status,
+            progress: updatedRecording.progress,
+            transcript: updatedRecording.transcript,
+            summary: updatedRecording.summary,
+            isSynced: true,
+            transcriptionStatus: updatedRecording.transcriptionStatus,
+            transcriptionCompletedAt: updatedRecording.transcriptionCompletedAt,
+            transcriptionError: updatedRecording.transcriptionError,
+          );
+          await localDataSource.updateRecording(syncedRecording);
+          return Right(syncedRecording.toEntity());
+        } catch (e) {
+          // Continue with local update even if sync fails
+          print('Failed to sync transcription update: $e');
+        }
+      }
+      
+      return Right(updatedRecording.toEntity());
+    } catch (e) {
+      return Left(RecordingFailure('Failed to update transcription: $e'));
+    }
+  }
+  
+  @override
+  Future<Either<Failure, List<Recording>>> getPendingTranscriptions() async {
+    try {
+      final recordings = await localDataSource.getRecordings();
+      final pendingTranscriptions = recordings
+          .where((recording) => 
+              recording.transcriptionStatus == TranscriptionStatus.pending ||
+              recording.transcriptionStatus == TranscriptionStatus.processing)
+          .map((recording) => recording.toEntity())
+          .toList();
+      
+      return Right(pendingTranscriptions);
+    } catch (e) {
+      return Left(RecordingFailure('Failed to get pending transcriptions: $e'));
+    }
   }
 }

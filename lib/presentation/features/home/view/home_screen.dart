@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../domain/entities/recording.dart';
 import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../recording/bloc/recording_state.dart';
@@ -133,26 +134,62 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecordingsList(BuildContext context, recordings) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<RecordingBloc>().add(LoadRecordingsRequested());
+    return BlocListener<RecordingBloc, RecordingState>(
+      listener: (context, state) {
+        if (state is TranscriptionCompleted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transcription completed successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is TranscriptionError) {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Transcription failed: ${state.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
-      child: ListView.builder(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          context.read<RecordingBloc>().add(LoadRecordingsRequested());
+        },
+        child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: recordings.length,
         itemBuilder: (context, index) {
           final recording = recordings[index];
-          return RecordingCard(
-            recording: recording,
-            onTap: () {
-              // TODO: Navigate to recording detail
-            },
-            onDelete: () {
-              _showDeleteDialog(context, recording.id);
+          return BlocBuilder<RecordingBloc, RecordingState>(
+            builder: (context, state) {
+              // Get the most up-to-date recording from the current state
+              Recording? updatedRecording;
+              if (state is RecordingsLoaded) {
+                updatedRecording = state.recordings.firstWhere(
+                  (r) => r.id == recording.id,
+                  orElse: () => recording,
+                );
+              } else {
+                updatedRecording = recording;
+              }
+              
+              return RecordingCard(
+                recording: updatedRecording!,
+                onTap: () {
+                  // TODO: Navigate to recording detail
+                },
+                onDelete: () {
+                  _showDeleteDialog(context, updatedRecording!.id);
+                },
+              );
             },
           );
         },
       ),
+    ),
     );
   }
 

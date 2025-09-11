@@ -19,10 +19,13 @@ class RecordingRealm extends _RecordingRealm
     DateTime createdAt,
     String status,
     double progress,
-    bool isSynced, {
+    bool isSynced,
+    String transcriptionStatus, {
     DateTime? updatedAt,
     String? transcript,
     String? summary,
+    DateTime? transcriptionCompletedAt,
+    String? transcriptionError,
   }) {
     RealmObjectBase.set(this, 'id', id);
     RealmObjectBase.set(this, 'title', title);
@@ -35,6 +38,13 @@ class RecordingRealm extends _RecordingRealm
     RealmObjectBase.set(this, 'transcript', transcript);
     RealmObjectBase.set(this, 'summary', summary);
     RealmObjectBase.set(this, 'isSynced', isSynced);
+    RealmObjectBase.set(this, 'transcriptionStatus', transcriptionStatus);
+    RealmObjectBase.set(
+      this,
+      'transcriptionCompletedAt',
+      transcriptionCompletedAt,
+    );
+    RealmObjectBase.set(this, 'transcriptionError', transcriptionError);
   }
 
   RecordingRealm._();
@@ -104,6 +114,28 @@ class RecordingRealm extends _RecordingRealm
   set isSynced(bool value) => RealmObjectBase.set(this, 'isSynced', value);
 
   @override
+  String get transcriptionStatus =>
+      RealmObjectBase.get<String>(this, 'transcriptionStatus') as String;
+  @override
+  set transcriptionStatus(String value) =>
+      RealmObjectBase.set(this, 'transcriptionStatus', value);
+
+  @override
+  DateTime? get transcriptionCompletedAt =>
+      RealmObjectBase.get<DateTime>(this, 'transcriptionCompletedAt')
+          as DateTime?;
+  @override
+  set transcriptionCompletedAt(DateTime? value) =>
+      RealmObjectBase.set(this, 'transcriptionCompletedAt', value);
+
+  @override
+  String? get transcriptionError =>
+      RealmObjectBase.get<String>(this, 'transcriptionError') as String?;
+  @override
+  set transcriptionError(String? value) =>
+      RealmObjectBase.set(this, 'transcriptionError', value);
+
+  @override
   Stream<RealmObjectChanges<RecordingRealm>> get changes =>
       RealmObjectBase.getChanges<RecordingRealm>(this);
 
@@ -128,6 +160,9 @@ class RecordingRealm extends _RecordingRealm
       'transcript': transcript.toEJson(),
       'summary': summary.toEJson(),
       'isSynced': isSynced.toEJson(),
+      'transcriptionStatus': transcriptionStatus.toEJson(),
+      'transcriptionCompletedAt': transcriptionCompletedAt.toEJson(),
+      'transcriptionError': transcriptionError.toEJson(),
     };
   }
 
@@ -144,6 +179,7 @@ class RecordingRealm extends _RecordingRealm
         'status': EJsonValue status,
         'progress': EJsonValue progress,
         'isSynced': EJsonValue isSynced,
+        'transcriptionStatus': EJsonValue transcriptionStatus,
       } =>
         RecordingRealm(
           fromEJson(id),
@@ -154,9 +190,14 @@ class RecordingRealm extends _RecordingRealm
           fromEJson(status),
           fromEJson(progress),
           fromEJson(isSynced),
+          fromEJson(transcriptionStatus),
           updatedAt: fromEJson(ejson['updatedAt']),
           transcript: fromEJson(ejson['transcript']),
           summary: fromEJson(ejson['summary']),
+          transcriptionCompletedAt: fromEJson(
+            ejson['transcriptionCompletedAt'],
+          ),
+          transcriptionError: fromEJson(ejson['transcriptionError']),
         ),
       _ => raiseInvalidEJson(ejson),
     };
@@ -185,6 +226,17 @@ class RecordingRealm extends _RecordingRealm
         SchemaProperty('transcript', RealmPropertyType.string, optional: true),
         SchemaProperty('summary', RealmPropertyType.string, optional: true),
         SchemaProperty('isSynced', RealmPropertyType.bool),
+        SchemaProperty('transcriptionStatus', RealmPropertyType.string),
+        SchemaProperty(
+          'transcriptionCompletedAt',
+          RealmPropertyType.timestamp,
+          optional: true,
+        ),
+        SchemaProperty(
+          'transcriptionError',
+          RealmPropertyType.string,
+          optional: true,
+        ),
       ],
     );
   }();

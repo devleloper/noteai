@@ -51,3 +51,47 @@ class RecordingProgressUpdated extends RecordingEvent {
   @override
   List<Object> get props => [recordingId, duration, amplitude];
 }
+
+class StartTranscriptionRequested extends RecordingEvent {
+  final String recordingId;
+  
+  const StartTranscriptionRequested(this.recordingId);
+  
+  @override
+  List<Object> get props => [recordingId];
+}
+
+class TranscriptionCompletedEvent extends RecordingEvent {
+  final String recordingId;
+  final String transcript;
+  
+  const TranscriptionCompletedEvent({
+    required this.recordingId,
+    required this.transcript,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, transcript];
+}
+
+class TranscriptionFailedEvent extends RecordingEvent {
+  final String recordingId;
+  final String error;
+  
+  const TranscriptionFailedEvent({
+    required this.recordingId,
+    required this.error,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, error];
+}
+
+class TranscriptionProcessingEvent extends RecordingEvent {
+  final String recordingId;
+  
+  const TranscriptionProcessingEvent(this.recordingId);
+  
+  @override
+  List<Object> get props => [recordingId];
+}

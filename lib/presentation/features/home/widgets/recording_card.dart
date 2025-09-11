@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/recording.dart';
 import '../../player/widgets/mini_player_widget.dart';
+import '../../recording/bloc/recording_bloc.dart';
+import '../../recording/bloc/recording_state.dart';
+import '../../recording/bloc/recording_event.dart';
+import '../../transcription/view/transcription_screen.dart';
 
 class RecordingCard extends StatelessWidget {
   final Recording recording;
@@ -80,6 +85,23 @@ class RecordingCard extends StatelessWidget {
                 ],
               ),
               
+              // Transcription status
+              if (recording.transcriptionStatus != TranscriptionStatus.notStarted) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildTranscriptionStatusIndicator(context),
+                    const SizedBox(width: 4),
+                    Text(
+                      _getTranscriptionStatusText(recording.transcriptionStatus),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _getTranscriptionStatusColor(recording.transcriptionStatus, context),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
               const SizedBox(height: 12),
               
               // Action buttons
@@ -102,6 +124,7 @@ class RecordingCard extends StatelessWidget {
                       );
                     },
                   ),
+                  _buildTranscriptionButton(context),
                   _buildActionButton(
                     context: context,
                     icon: Icons.chat,
@@ -132,6 +155,7 @@ class RecordingCard extends StatelessWidget {
     required String label,
     required VoidCallback onPressed,
     bool isDestructive = false,
+    bool isLoading = false,
   }) {
     return InkWell(
       onTap: onPressed,
@@ -141,13 +165,27 @@ class RecordingCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isDestructive
-                  ? Theme.of(context).colorScheme.error
-                  : Theme.of(context).colorScheme.primary,
-            ),
+            if (isLoading)
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isDestructive
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              )
+            else
+              Icon(
+                icon,
+                size: 20,
+                color: isDestructive
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
+              ),
             const SizedBox(height: 2),
             Text(
               label,
@@ -220,5 +258,118 @@ class RecordingCard extends StatelessWidget {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
+  }
+
+  Widget _buildTranscriptionButton(BuildContext context) {
+    return BlocBuilder<RecordingBloc, RecordingState>(
+      builder: (context, state) {
+        // Check if this recording is currently being transcribed
+        bool isTranscribing = false;
+        if (state is TranscriptionProcessing && state.recordingId == recording.id) {
+          isTranscribing = true;
+        }
+
+        return _buildActionButton(
+          context: context,
+          icon: isTranscribing ? Icons.sync : Icons.text_snippet,
+          label: isTranscribing ? 'Transcribing' : 'Transcribe',
+          onPressed: () {
+            print('Transcription button pressed for recording: ${recording.id}');
+            print('Current transcription status: ${recording.transcriptionStatus}');
+            
+            if (recording.transcriptionStatus == TranscriptionStatus.completed) {
+              // Navigate to transcription screen
+              print('Navigating to transcription screen');
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TranscriptionScreen(recording: recording),
+                ),
+              );
+            } else if (recording.transcriptionStatus == TranscriptionStatus.failed) {
+              // Retry transcription
+              print('Retrying transcription');
+              context.read<RecordingBloc>().add(
+                StartTranscriptionRequested(recording.id),
+              );
+            } else if (recording.transcriptionStatus == TranscriptionStatus.notStarted) {
+              // Start transcription
+              print('Starting transcription');
+              context.read<RecordingBloc>().add(
+                StartTranscriptionRequested(recording.id),
+              );
+            } else {
+              print('Transcription button pressed but no action taken. Status: ${recording.transcriptionStatus}');
+            }
+          },
+          isLoading: isTranscribing,
+        );
+      },
+    );
+  }
+
+  Widget _buildTranscriptionStatusIndicator(BuildContext context) {
+    switch (recording.transcriptionStatus) {
+      case TranscriptionStatus.pending:
+        return Icon(
+          Icons.schedule,
+          size: 16,
+          color: Colors.orange,
+        );
+      case TranscriptionStatus.processing:
+        return SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        );
+      case TranscriptionStatus.completed:
+        return Icon(
+          Icons.check_circle,
+          size: 16,
+          color: Colors.green,
+        );
+      case TranscriptionStatus.failed:
+        return Icon(
+          Icons.error,
+          size: 16,
+          color: Theme.of(context).colorScheme.error,
+        );
+      case TranscriptionStatus.notStarted:
+        return const SizedBox.shrink();
+    }
+  }
+
+  String _getTranscriptionStatusText(TranscriptionStatus status) {
+    switch (status) {
+      case TranscriptionStatus.pending:
+        return 'Transcription pending';
+      case TranscriptionStatus.processing:
+        return 'Transcribing...';
+      case TranscriptionStatus.completed:
+        return 'Transcription ready';
+      case TranscriptionStatus.failed:
+        return 'Transcription failed';
+      case TranscriptionStatus.notStarted:
+        return '';
+    }
+  }
+
+  Color _getTranscriptionStatusColor(TranscriptionStatus status, BuildContext context) {
+    switch (status) {
+      case TranscriptionStatus.pending:
+        return Colors.orange;
+      case TranscriptionStatus.processing:
+        return Theme.of(context).colorScheme.primary;
+      case TranscriptionStatus.completed:
+        return Colors.green;
+      case TranscriptionStatus.failed:
+        return Theme.of(context).colorScheme.error;
+      case TranscriptionStatus.notStarted:
+        return Colors.grey;
+    }
   }
 }

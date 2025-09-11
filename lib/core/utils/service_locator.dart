@@ -13,6 +13,7 @@ import '../../data/datasources/local/background_recording_service.dart';
 import '../../data/datasources/local/offline_task_queue.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
+import '../../data/datasources/remote/transcription_service.dart';
 import '../../data/repositories/recording_repository_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/ai_repository_impl.dart';
@@ -23,6 +24,8 @@ import '../../domain/usecases/recording/start_recording.dart';
 import '../../domain/usecases/recording/stop_recording.dart';
 import '../../domain/usecases/recording/get_recordings.dart';
 import '../../domain/usecases/recording/delete_recording.dart';
+import '../../domain/usecases/transcription/start_transcription.dart';
+import '../../domain/usecases/transcription/update_transcription.dart';
 import '../../domain/usecases/auth/sign_in_with_google.dart';
 import '../../domain/usecases/auth/get_current_user.dart';
 import '../../domain/usecases/ai/transcribe_audio.dart';
@@ -50,6 +53,7 @@ Future<void> init() async {
     () => FirebaseDataSourceImpl(sl(), sl()),
   );
   sl.registerLazySingleton<OpenAIDataSource>(() => OpenAIDataSourceImpl());
+  sl.registerLazySingleton<TranscriptionService>(() => TranscriptionService());
   
   // Repositories
   sl.registerLazySingleton<RecordingRepository>(
@@ -79,6 +83,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => StopRecording(sl()));
   sl.registerLazySingleton(() => GetRecordings(sl()));
   sl.registerLazySingleton(() => DeleteRecording(sl()));
+  sl.registerLazySingleton(() => StartTranscription(sl()));
+  sl.registerLazySingleton(() => UpdateTranscription(sl()));
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => TranscribeAudio(sl()));

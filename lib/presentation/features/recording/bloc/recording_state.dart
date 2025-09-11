@@ -56,3 +56,47 @@ class RecordingError extends RecordingState {
   @override
   List<Object> get props => [message];
 }
+
+class TranscriptionPending extends RecordingState {
+  final String recordingId;
+  
+  const TranscriptionPending(this.recordingId);
+  
+  @override
+  List<Object> get props => [recordingId];
+}
+
+class TranscriptionProcessing extends RecordingState {
+  final String recordingId;
+  
+  const TranscriptionProcessing(this.recordingId);
+  
+  @override
+  List<Object> get props => [recordingId];
+}
+
+class TranscriptionCompleted extends RecordingState {
+  final String recordingId;
+  final String transcript;
+  
+  const TranscriptionCompleted({
+    required this.recordingId,
+    required this.transcript,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, transcript];
+}
+
+class TranscriptionError extends RecordingState {
+  final String recordingId;
+  final String error;
+  
+  const TranscriptionError({
+    required this.recordingId,
+    required this.error,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, error];
+}

@@ -56,6 +56,8 @@ class NoteAIApp extends StatelessWidget {
             stopRecording: di.sl(),
             getRecordings: di.sl(),
             deleteRecording: di.sl(),
+            startTranscription: di.sl(),
+            updateTranscription: di.sl(),
           ),
         ),
       ],
