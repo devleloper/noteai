@@ -63,6 +63,7 @@ class NoteAIApp extends StatelessWidget {
             updateTranscription: di.sl(),
             createSession: di.sl<CreateSession>(),
             generateSummary: di.sl<GenerateSummary>(),
+            getUserPreferences: di.sl(),
           ),
         ),
       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../domain/entities/chat_message.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
@@ -110,14 +111,48 @@ class MessageBubble extends StatelessWidget {
                         ),
                       ),
                     if (isAI)
-                      SelectableText.rich(
-                        TextSpan(
-                          text: message.content,
-                          style: TextStyle(
+                      MarkdownBody(
+                        data: message.content,
+                        selectable: true,
+                        shrinkWrap: true,
+                        fitContent: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 14,
                           ),
+                          h1: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          h2: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          h3: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          strong: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          code: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            backgroundColor: Theme.of(context).colorScheme.surface,
+                            fontFamily: 'monospace',
+                          ),
+                          codeblockDecoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        onTapLink: (text, href, title) {
+                          // Handle link taps
+                        },
                       )
                     else
                       SelectableText(

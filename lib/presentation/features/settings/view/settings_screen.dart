@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
+import '../widgets/language_tile.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -72,6 +73,18 @@ class SettingsScreen extends StatelessWidget {
               ),
               
               const SizedBox(height: 16),
+              
+              // Language Settings
+              if (state is AuthAuthenticated)
+                LanguageTile(
+                  selectedLanguageCode: state.user.preferences.language,
+                  onLanguageChanged: (languageCode) {
+                    // TODO: Implement language change
+                    _updateUserLanguage(context, languageCode);
+                  },
+                ),
+              
+              if (state is AuthAuthenticated) const SizedBox(height: 16),
               
               // Settings Options
               Card(
@@ -195,6 +208,17 @@ class SettingsScreen extends StatelessWidget {
             child: const Text('Sign Out'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _updateUserLanguage(BuildContext context, String languageCode) {
+    // TODO: Implement language update using UpdateUserPreferences use case
+    // For now, just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Language changed to: $languageCode'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

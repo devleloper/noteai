@@ -138,10 +138,61 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> updateUserPreferences(UserPreferences preferences) async {
     try {
-      // TODO: Implement user preferences update
-      throw UnimplementedError();
+      final currentUser = firebaseAuth.currentUser;
+      if (currentUser == null) {
+        return Left(AuthFailure('No authenticated user'));
+      }
+
+      await firestore.collection('users').doc(currentUser.uid).update({
+        'preferences': {
+          'name': preferences.name,
+          'role': preferences.role,
+          'summaryStyle': preferences.summaryStyle,
+          'autoTranscribe': preferences.autoTranscribe,
+          'autoSummarize': preferences.autoSummarize,
+          'language': preferences.language,
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return const Right(null);
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(AuthFailure('Failed to update user preferences: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserPreferences>> getCurrentUserPreferences() async {
+    try {
+      final currentUser = firebaseAuth.currentUser;
+      if (currentUser == null) {
+        return Left(AuthFailure('No authenticated user'));
+      }
+
+      final doc = await firestore.collection('users').doc(currentUser.uid).get();
+      if (!doc.exists) {
+        return Left(AuthFailure('User document not found'));
+      }
+
+      final data = doc.data()!;
+      final preferencesData = data['preferences'] as Map<String, dynamic>?;
+      
+      if (preferencesData == null) {
+        return Left(AuthFailure('User preferences not found'));
+      }
+
+      final preferences = UserPreferences(
+        name: preferencesData['name'] ?? 'AI Assistant',
+        role: preferencesData['role'] ?? 'lecture assistant',
+        summaryStyle: preferencesData['summaryStyle'] ?? 'concise',
+        autoTranscribe: preferencesData['autoTranscribe'] ?? true,
+        autoSummarize: preferencesData['autoSummarize'] ?? true,
+        language: preferencesData['language'] ?? 'en',
+      );
+
+      return Right(preferences);
+    } catch (e) {
+      return Left(AuthFailure('Failed to get user preferences: ${e.toString()}'));
     }
   }
 }

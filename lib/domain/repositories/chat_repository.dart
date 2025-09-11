@@ -57,10 +57,12 @@ class GenerateSummaryParams {
   final String recordingId;
   final String transcript;
   final String model;
+  final String language;
 
   const GenerateSummaryParams({
     required this.recordingId,
     required this.transcript,
     required this.model,
+    required this.language,
   });
 }

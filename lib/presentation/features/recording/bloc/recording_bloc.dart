@@ -10,6 +10,7 @@ import '../../../../domain/usecases/transcription/start_transcription.dart';
 import '../../../../domain/usecases/transcription/update_transcription.dart';
 import '../../../../domain/usecases/chat/create_session.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart';
+import '../../../../domain/usecases/auth/get_user_preferences.dart';
 import '../../../../domain/repositories/chat_repository.dart';
 import '../../../../data/datasources/remote/transcription_service.dart';
 import '../../../../domain/entities/recording.dart';
@@ -30,6 +31,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   final UpdateTranscription _updateTranscription;
   final CreateSession _createSession;
   final GenerateSummary _generateSummary;
+  final GetUserPreferences _getUserPreferences;
   final AudioRecordingService _audioService;
   final TranscriptionService _transcriptionService;
   StreamSubscription<RecordingData>? _recordingSubscription;
@@ -44,6 +46,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     required UpdateTranscription updateTranscription,
     required CreateSession createSession,
     required GenerateSummary generateSummary,
+    required GetUserPreferences getUserPreferences,
   }) : _startRecording = startRecording,
        _stopRecording = stopRecording,
        _getRecordings = getRecordings,
@@ -53,6 +56,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
        _updateTranscription = updateTranscription,
        _createSession = createSession,
        _generateSummary = generateSummary,
+       _getUserPreferences = getUserPreferences,
        _audioService = di.sl<AudioRecordingService>(),
        _transcriptionService = di.sl<TranscriptionService>(),
        super(RecordingInitial()) {
@@ -491,10 +495,18 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
 
   void _generateSummaryForSession(String recordingId, String transcript) async {
     try {
+      // Get user preferences to get language
+      final userPrefsResult = await _getUserPreferences(NoParams());
+      final language = userPrefsResult.fold(
+        (failure) => 'en', // Default to English if failed
+        (preferences) => preferences.language,
+      );
+
       final summaryResult = await _generateSummary(GenerateSummaryParams(
         recordingId: recordingId,
         transcript: transcript,
         model: 'gpt-4o', // Default model for summaries
+        language: language,
       ));
       
       summaryResult.fold(

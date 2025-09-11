@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../../domain/entities/chat_message.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../models/language_prompts.dart';
 
 class ModelConfig {
   final String name;
@@ -174,38 +175,11 @@ class AIChatService {
   Future<String> generateSummary({
     required String transcript,
     required String model,
+    required String language,
     double temperature = 0.3, // Lower temperature for more consistent summaries
   }) async {
-    const systemPrompt = '''
-You are an expert at creating structured summaries of educational content, lectures, and discussions.
-
-Create a comprehensive summary in Markdown format with the following structure:
-- Clear headings and subheadings using ## and ###
-- Bullet points for key information using -
-- Bold text for important concepts using **text**
-- LaTeX formulas for mathematical expressions using \$formula\$
-- Organized sections by topic
-- Professional and educational tone
-
-Format example:
-## Main Topic
-- Key point 1
-- Key point 2
-
-### Subsection
-**Important concept**: Explanation
-
-**Formula**: \$x^2 + y^2 = z^2\$
-
-Focus on:
-1. Main topics and themes
-2. Key concepts and definitions
-3. Important formulas and calculations
-4. Action items or assignments
-5. Questions or discussions raised
-
-Make the summary comprehensive but concise, highlighting the most important information for future reference.
-''';
+    // Get language-specific prompt
+    final systemPrompt = LanguagePrompts.getSummaryPrompt(language);
 
     return await sendMessage(
       message: 'Summarize this transcript: $transcript',

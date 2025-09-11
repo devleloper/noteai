@@ -37,7 +37,11 @@ class AIRepositoryImpl implements AIRepository {
   @override
   Future<Either<Failure, Summary>> generateSummary(String transcript, UserPreferences preferences) async {
     try {
-      final summaryText = await openAIDataSource.generateSummary(transcript);
+      final summaryText = await openAIDataSource.generateSummary(
+        transcript: transcript,
+        model: 'gpt-4o',
+        language: preferences.language,
+      );
       final summary = Summary(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         recordingId: 'mock_recording_id',

@@ -33,6 +33,8 @@ import '../../domain/usecases/transcription/start_transcription.dart';
 import '../../domain/usecases/transcription/update_transcription.dart';
 import '../../domain/usecases/auth/sign_in_with_google.dart';
 import '../../domain/usecases/auth/get_current_user.dart';
+import '../../domain/usecases/auth/update_user_preferences.dart';
+import '../../domain/usecases/auth/get_user_preferences.dart';
 import '../../domain/usecases/ai/transcribe_audio.dart';
 import '../../domain/usecases/chat/create_session.dart';
 import '../../domain/usecases/chat/send_message.dart';
@@ -103,6 +105,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => UpdateTranscription(sl()));
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
+  sl.registerLazySingleton(() => UpdateUserPreferences(sl()));
+  sl.registerLazySingleton(() => GetUserPreferences(sl()));
   sl.registerLazySingleton(() => TranscribeAudio(sl()));
   
   // Register ChatRepository and Chat Use Cases after Realm is initialized

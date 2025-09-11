@@ -187,6 +187,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         recordingId: currentState.session.recordingId,
         transcript: event.transcript,
         model: event.model,
+        language: event.language,
       );
 
       final result = await _generateSummary(params);

@@ -398,6 +398,7 @@ class ChatRepositoryImpl implements ChatRepository {
       final summary = await _aiService.generateSummary(
         transcript: params.transcript,
         model: params.model,
+        language: params.language,
       );
 
       // Update session with summary

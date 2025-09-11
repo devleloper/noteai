@@ -47,11 +47,12 @@ class ChangeModel extends ChatEvent {
 class GenerateSummary extends ChatEvent {
   final String transcript;
   final String model;
+  final String language;
 
-  const GenerateSummary(this.transcript, this.model);
+  const GenerateSummary(this.transcript, this.model, this.language);
 
   @override
-  List<Object> get props => [transcript, model];
+  List<Object> get props => [transcript, model, language];
 }
 
 class CopyMessage extends ChatEvent {
