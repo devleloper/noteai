@@ -23,6 +23,7 @@ class ChatLoaded extends ChatState {
   final String selectedModel;
   final bool isGenerating;
   final bool isGeneratingSummary;
+  final bool isTyping;
 
   const ChatLoaded({
     required this.session,
@@ -30,6 +31,7 @@ class ChatLoaded extends ChatState {
     required this.selectedModel,
     this.isGenerating = false,
     this.isGeneratingSummary = false,
+    this.isTyping = false,
   });
 
   @override
@@ -39,6 +41,7 @@ class ChatLoaded extends ChatState {
         selectedModel,
         isGenerating,
         isGeneratingSummary,
+        isTyping,
       ];
 
   ChatLoaded copyWith({
@@ -47,6 +50,7 @@ class ChatLoaded extends ChatState {
     String? selectedModel,
     bool? isGenerating,
     bool? isGeneratingSummary,
+    bool? isTyping,
   }) {
     return ChatLoaded(
       session: session ?? this.session,
@@ -54,6 +58,7 @@ class ChatLoaded extends ChatState {
       selectedModel: selectedModel ?? this.selectedModel,
       isGenerating: isGenerating ?? this.isGenerating,
       isGeneratingSummary: isGeneratingSummary ?? this.isGeneratingSummary,
+      isTyping: isTyping ?? this.isTyping,
     );
   }
 }

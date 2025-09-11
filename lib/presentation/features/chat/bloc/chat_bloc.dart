@@ -42,6 +42,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<CopyMessage>(_onCopyMessage);
     on<DeleteMessage>(_onDeleteMessage);
     on<RefreshSession>(_onRefreshSession);
+    on<StartTyping>(_onStartTyping);
+    on<StopTyping>(_onStopTyping);
   }
 
   void _onLoadChatSession(
@@ -91,7 +93,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is! ChatLoaded) return;
 
     final currentState = state as ChatLoaded;
-    emit(currentState.copyWith(isGenerating: true));
+    
+    // First, add the user message immediately to the UI
+    final userMessage = ChatMessage(
+      id: _uuid.v4(),
+      sessionId: currentState.session.id,
+      type: MessageType.user,
+      content: event.content,
+      model: event.model ?? currentState.selectedModel,
+      timestamp: DateTime.now(),
+      parentMessageId: null,
+    );
+    
+    final updatedMessages = [...currentState.messages, userMessage];
+    emit(currentState.copyWith(
+      messages: updatedMessages,
+      isGenerating: true,
+      isTyping: true,
+    ));
 
     try {
       final params = SendMessageParams(
@@ -102,9 +121,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       final result = await _sendMessage(params);
       result.fold(
-        (failure) => emit(ChatError(failure.message ?? 'Failed to send message')),
+        (failure) {
+          emit(ChatError(failure.message ?? 'Failed to send message'));
+        },
         (message) {
-          // Reload messages to get updated list
+          // Reload messages to get updated list with AI response
           _addEvent(RefreshSession());
         },
       );
@@ -247,11 +268,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           selectedModel: currentState.selectedModel,
           isGenerating: false,
           isGeneratingSummary: false,
+          isTyping: false,
         ));
       }
     } catch (e) {
       emit(ChatError('Failed to refresh session: $e'));
     }
+  }
+
+  void _onStartTyping(
+    StartTyping event,
+    Emitter<ChatState> emit,
+  ) {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+    emit(currentState.copyWith(isTyping: true));
+  }
+
+  void _onStopTyping(
+    StopTyping event,
+    Emitter<ChatState> emit,
+  ) {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+    emit(currentState.copyWith(isTyping: false));
   }
 
   // Helper method to add events

@@ -14,6 +14,7 @@ import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/model_selector.dart';
+import '../widgets/typing_indicator.dart';
 
 class ChatScreen extends StatefulWidget {
   final String recordingId;
@@ -130,9 +131,11 @@ class _ChatScreenState extends State<ChatScreen> {
               }
             });
           } else if (state is ChatLoaded) {
-            // Auto-scroll to bottom when new messages are received
+            // Auto-scroll to bottom when new messages are received or typing starts
             final currentMessageCount = state.messages.length + (state.session.hasSummary ? 1 : 0);
-            if (currentMessageCount > _lastMessageCount) {
+            final shouldScroll = currentMessageCount > _lastMessageCount || state.isTyping;
+            
+            if (shouldScroll) {
               _lastMessageCount = currentMessageCount;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (_scrollController.hasClients) {
@@ -214,8 +217,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(8),
-                    itemCount: allMessages.length,
+                    itemCount: allMessages.length + (state.isTyping ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // Show typing indicator at the end if typing
+                      if (state.isTyping && index == allMessages.length) {
+                        return const TypingIndicator();
+                      }
+                      
                       final message = allMessages[index];
                       final isSummary = message.metadata?['isSummary'] == true;
                       

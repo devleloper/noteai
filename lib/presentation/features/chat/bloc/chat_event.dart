@@ -75,3 +75,11 @@ class DeleteMessage extends ChatEvent {
 class RefreshSession extends ChatEvent {
   const RefreshSession();
 }
+
+class StartTyping extends ChatEvent {
+  const StartTyping();
+}
+
+class StopTyping extends ChatEvent {
+  const StopTyping();
+}
