@@ -199,7 +199,17 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     Emitter<RecordingState> emit,
   ) async {
     print('StartTranscriptionRequested for recording: ${event.recordingId}');
-    emit(TranscriptionPending(event.recordingId));
+    
+    // Get current recordings to maintain the list
+    final recordingsResult = await _getRecordings(NoParams());
+    if (recordingsResult.isLeft()) {
+      final failure = recordingsResult.fold((l) => l, (r) => throw Exception('Unexpected right value'));
+      emit(RecordingError(failure.message));
+      return;
+    }
+    
+    final recordings = recordingsResult.fold((l) => throw Exception('Unexpected left value'), (r) => r);
+    emit(TranscriptionPending(recordingId: event.recordingId, recordings: recordings));
     
     // Use the start transcription use case
     final result = await _startTranscription(StartTranscriptionParams(recordingId: event.recordingId));
@@ -219,8 +229,17 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   void _onTranscriptionProcessing(
     TranscriptionProcessingEvent event,
     Emitter<RecordingState> emit,
-  ) {
-    emit(TranscriptionProcessing(event.recordingId));
+  ) async {
+    // Get current recordings to maintain the list
+    final recordingsResult = await _getRecordings(NoParams());
+    if (recordingsResult.isLeft()) {
+      final failure = recordingsResult.fold((l) => l, (r) => throw Exception('Unexpected right value'));
+      emit(RecordingError(failure.message));
+      return;
+    }
+    
+    final recordings = recordingsResult.fold((l) => throw Exception('Unexpected left value'), (r) => r);
+    emit(TranscriptionProcessing(recordingId: event.recordingId, recordings: recordings));
   }
   
   void _onTranscriptionCompleted(

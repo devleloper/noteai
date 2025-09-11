@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../domain/entities/chat_message.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_state.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -21,6 +24,7 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.type == MessageType.user;
     final isAI = message.type == MessageType.ai;
+    final isSummary = message.metadata?['isSummary'] == true;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -44,20 +48,59 @@ class MessageBubble extends StatelessWidget {
             child: GestureDetector(
               onLongPress: () => _showContextMenu(context),
               child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75, // Max 75% of screen width
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: isUser
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(18).copyWith(
-                    bottomLeft: isUser ? const Radius.circular(18) : const Radius.circular(4),
-                    bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(18),
+                    topLeft: isUser ? const Radius.circular(18) : const Radius.circular(4),
+                    topRight: isUser ? const Radius.circular(4) : const Radius.circular(18),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isAI && message.model != null)
+                    if (isSummary) ...[
+                      // Summary header with icon and copy button
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.summarize,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'AI Summary',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 16),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: message.content));
+                              onCopy();
+                            },
+                            tooltip: 'Copy summary',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ] else if (isAI && message.model != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
@@ -71,6 +114,8 @@ class MessageBubble extends StatelessWidget {
                       MarkdownBody(
                         data: message.content,
                         selectable: true,
+                        shrinkWrap: true,
+                        fitContent: true,
                         styleSheet: MarkdownStyleSheet(
                           p: TextStyle(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -133,14 +178,26 @@ class MessageBubble extends StatelessWidget {
           ),
           if (isUser) ...[
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              child: Icon(
-                Icons.person,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                String? photoUrl;
+                if (state is AuthAuthenticated) {
+                  photoUrl = state.user.photoUrl;
+                }
+                
+                return CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: photoUrl == null
+                      ? Icon(
+                          Icons.person,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSecondary,
+                        )
+                      : null,
+                );
+              },
             ),
           ],
         ],
@@ -149,6 +206,8 @@ class MessageBubble extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final isSummary = message.metadata?['isSummary'] == true;
+    
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -165,7 +224,7 @@ class MessageBubble extends StatelessWidget {
                 onCopy();
               },
             ),
-            if (message.type == MessageType.ai) ...[
+            if (message.type == MessageType.ai && !isSummary) ...[
               ListTile(
                 leading: const Icon(Icons.refresh),
                 title: const Text('Regenerate'),
@@ -175,14 +234,15 @@ class MessageBubble extends StatelessWidget {
                 },
               ),
             ],
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteConfirmation(context);
-              },
-            ),
+            if (!isSummary)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmation(context);
+                },
+              ),
           ],
         ),
       ),

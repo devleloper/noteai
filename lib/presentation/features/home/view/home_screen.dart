@@ -66,6 +66,16 @@ class _HomeScreenState extends State<HomeScreen> {
               return _buildEmptyState(context);
             }
             return _buildRecordingsList(context, state.recordings);
+          } else if (state is TranscriptionPending) {
+            if (state.recordings.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            return _buildRecordingsList(context, state.recordings);
+          } else if (state is TranscriptionProcessing) {
+            if (state.recordings.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            return _buildRecordingsList(context, state.recordings);
           } else if (state is RecordingError) {
             return _buildErrorState(context, state.message);
           }
@@ -166,6 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
               // Get the most up-to-date recording from the current state
               Recording? updatedRecording;
               if (state is RecordingsLoaded) {
+                updatedRecording = state.recordings.firstWhere(
+                  (r) => r.id == recording.id,
+                  orElse: () => recording,
+                );
+              } else if (state is TranscriptionPending) {
+                updatedRecording = state.recordings.firstWhere(
+                  (r) => r.id == recording.id,
+                  orElse: () => recording,
+                );
+              } else if (state is TranscriptionProcessing) {
                 updatedRecording = state.recordings.firstWhere(
                   (r) => r.id == recording.id,
                   orElse: () => recording,

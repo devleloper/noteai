@@ -8,6 +8,7 @@ import '../../../../domain/usecases/chat/create_session.dart';
 import '../../../../domain/usecases/chat/send_message.dart' as send_message_use_case;
 import '../../../../domain/usecases/chat/get_chat_history.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart' as generate_summary_use_case;
+import '../../../../domain/entities/chat_message.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
@@ -78,11 +79,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat with AI'),
-        actions: [
-          BlocBuilder<ChatBloc, ChatState>(
+    return BlocProvider<ChatBloc>(
+      create: (context) => _chatBloc,
+      child: Scaffold(
+        appBar: AppBar(
+          title: BlocBuilder<ChatBloc, ChatState>(
             builder: (context, state) {
               if (state is ChatLoaded) {
                 return ModelSelector(
@@ -90,20 +91,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   onModelChanged: _onModelChanged,
                 );
               }
-              return const SizedBox.shrink();
+              return const Text('Chat with AI');
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: Navigate to chat settings
-            },
-          ),
-        ],
-      ),
-      body: BlocConsumer<ChatBloc, ChatState>(
-        bloc: _chatBloc,
-        listener: (context, state) {
+        ),
+        body: BlocConsumer<ChatBloc, ChatState>(
+          listener: (context, state) {
           if (state is ChatError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -116,13 +109,6 @@ class _ChatScreenState extends State<ChatScreen> {
               const SnackBar(
                 content: Text('Summary generated successfully!'),
                 backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is MessageCopied) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Message copied to clipboard'),
-                duration: Duration(seconds: 1),
               ),
             );
           }
@@ -168,58 +154,53 @@ class _ChatScreenState extends State<ChatScreen> {
           }
 
           if (state is ChatLoaded) {
+            // Create a list of all messages including summary as first message
+            final List<ChatMessage> allMessages = [];
+            
+            // Add summary as first message if it exists
+            if (state.session.hasSummary) {
+              allMessages.add(ChatMessage(
+                id: 'summary-${state.session.id}',
+                sessionId: state.session.id,
+                type: MessageType.ai,
+                content: state.session.summary!,
+                model: 'Summary',
+                timestamp: state.session.createdAt,
+                parentMessageId: null,
+                metadata: {'isSummary': true},
+              ));
+            }
+            
+            // Add regular messages
+            allMessages.addAll(state.messages);
+
             return Column(
               children: [
-                // Summary section
-                if (state.session.hasSummary)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.summarize,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'AI Summary',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          state.session.summary!,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-
                 // Messages list
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(8),
-                    itemCount: state.messages.length,
+                    itemCount: allMessages.length,
                     itemBuilder: (context, index) {
-                      final message = state.messages[index];
+                      final message = allMessages[index];
+                      final isSummary = message.metadata?['isSummary'] == true;
+                      
                       return MessageBubble(
                         message: message,
-                        onCopy: () => _chatBloc.add(CopyMessage(message.id)),
-                        onRegenerate: () => _chatBloc.add(RegenerateResponse(message.id)),
-                        onDelete: () => _chatBloc.add(DeleteMessage(message.id)),
+                        onCopy: () {
+                          // Show SnackBar directly without changing bloc state
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isSummary 
+                                ? 'Summary copied to clipboard' 
+                                : 'Message copied to clipboard'),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        onRegenerate: isSummary ? () {} : () => _chatBloc.add(RegenerateResponse(message.id)),
+                        onDelete: isSummary ? () {} : () => _chatBloc.add(DeleteMessage(message.id)),
                       );
                     },
                   ),
@@ -256,7 +237,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       const SizedBox(width: 8),
                       BlocBuilder<ChatBloc, ChatState>(
-                        bloc: _chatBloc,
                         builder: (context, state) {
                           final isLoading = state is ChatLoaded && state.isGenerating;
                           return IconButton(
@@ -282,6 +262,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Text('Unknown state'),
           );
         },
+      ),
       ),
     );
   }
