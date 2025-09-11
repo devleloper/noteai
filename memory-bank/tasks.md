@@ -774,6 +774,147 @@ The implementation is complete and ready for testing. All requested features hav
 ### **Ready for Testing**
 The mini audio player implementation is complete and ready for testing. All requested features have been successfully implemented with proper error handling, accessibility, and user experience considerations.
 
+## 🏠 NEW TASK: HOME SCREEN UI ENHANCEMENTS
+
+### Task: Visual Day Separation & Recording Rename Functionality
+**Complexity**: Level 2 (Simple Enhancement)
+**Type**: UI/UX Enhancement & User Experience Improvement
+
+### Technology Stack
+- Framework: Flutter
+- State Management: BLoC (existing)
+- Database: Realm (existing)
+- UI: Material Design 3
+- Date/Time: Dart DateTime utilities
+- Gesture Handling: Flutter gesture detection
+
+### Technology Validation Checkpoints
+- [x] Flutter project structure validated
+- [x] BLoC state management functional
+- [x] Realm database integration working
+- [x] Material Design 3 theme implemented
+- [x] DateTime utilities available in Dart
+- [x] Gesture detection available in Flutter
+
+### Status
+- [x] Initialization complete
+- [x] Planning complete
+- [x] Creative phases complete
+- [x] Technology validation complete
+- [x] Implementation complete
+
+### Requirements Analysis
+
+#### Core Requirements:
+1. **Visual Day Separation**:
+   - [ ] Group recordings by date (like iMessage)
+   - [ ] Add date headers between recording groups
+   - [ ] Format dates in user-friendly format (Today, Yesterday, Date)
+   - [ ] Maintain chronological order (newest first)
+
+2. **Recording Rename Functionality**:
+   - [ ] Add long-press gesture to recording tiles
+   - [ ] Show rename dialog with current title
+   - [ ] Allow editing of recording title
+   - [ ] Save updated title to database
+   - [ ] Update UI immediately after rename
+
+3. **User Experience**:
+   - [ ] Smooth animations for date headers
+   - [ ] Intuitive long-press feedback
+   - [ ] Proper keyboard handling for rename dialog
+   - [ ] Error handling for rename failures
+   - [ ] Maintain existing functionality (play, delete, etc.)
+
+### Component Analysis
+
+#### Affected Components:
+1. **Home Screen**:
+   - Changes needed: Add date grouping logic, update ListView structure
+   - Dependencies: Recording data, date utilities
+
+2. **Recording Card Widget**:
+   - Changes needed: Add long-press gesture detection, rename dialog
+   - Dependencies: Gesture detection, dialog components
+
+3. **Recording Repository**:
+   - Changes needed: Add update recording title method
+   - Dependencies: Realm database operations
+
+4. **Recording BLoC**:
+   - Changes needed: Add rename recording event and state
+   - Dependencies: Recording repository, state management
+
+### Implementation Plan
+
+#### Phase 1: Date Grouping Implementation
+- [x] **Subtask 1.1**: Create date grouping utility functions
+- [x] **Subtask 1.2**: Implement date header widget
+- [x] **Subtask 1.3**: Update HomeScreen to use grouped recordings
+- [x] **Subtask 1.4**: Add date formatting (Today, Yesterday, etc.)
+- [x] **Subtask 1.5**: Test date grouping with various recording dates
+
+#### Phase 2: Rename Functionality
+- [x] **Subtask 2.1**: Add update recording title method to repository
+- [x] **Subtask 2.2**: Add rename recording event to RecordingBloc
+- [x] **Subtask 2.3**: Implement rename dialog widget
+- [x] **Subtask 2.4**: Add long-press gesture to RecordingCard
+- [x] **Subtask 2.5**: Handle rename success/error states
+
+#### Phase 3: UI Integration & Polish
+- [x] **Subtask 3.1**: Integrate date headers with existing list
+- [x] **Subtask 3.2**: Add haptic feedback for long-press
+- [x] **Subtask 3.3**: Implement smooth animations
+- [x] **Subtask 3.4**: Add proper error handling and user feedback
+- [x] **Subtask 3.5**: Test all functionality together
+
+#### Phase 4: Testing & Validation
+- [x] **Subtask 4.1**: Test with recordings from different dates
+- [x] **Subtask 4.2**: Test rename functionality with various inputs
+- [x] **Subtask 4.3**: Test edge cases (empty titles, special characters)
+- [x] **Subtask 4.4**: Verify existing functionality still works
+- [x] **Subtask 4.5**: Test performance with large number of recordings
+
+### Creative Phases Required
+- [x] **UI/UX Design**: Date header styling and layout - COMPLETED
+- [x] **UI/UX Design**: Rename dialog design and interaction - COMPLETED
+- [x] **UI/UX Design**: Long-press feedback and animations - COMPLETED
+
+### Dependencies
+- RecordingBloc (existing)
+- RecordingRepository (existing)
+- Realm database (existing)
+- Material Design 3 theme (existing)
+- Flutter gesture detection (built-in)
+
+### Challenges & Mitigations
+- **Challenge 1**: Date grouping performance with large datasets - **Mitigation**: Implement efficient grouping algorithm
+- **Challenge 2**: Long-press gesture conflicts with existing gestures - **Mitigation**: Proper gesture handling and timing
+- **Challenge 3**: Date formatting for different locales - **Mitigation**: Use Flutter's built-in date formatting
+- **Challenge 4**: Rename dialog keyboard handling - **Mitigation**: Proper focus management and keyboard handling
+- **Challenge 5**: Maintaining list performance with headers - **Mitigation**: Use efficient ListView.builder with proper item types
+
+### Files to Modify
+- `lib/presentation/features/home/view/home_screen.dart` - Add date grouping logic
+- `lib/presentation/features/home/widgets/recording_card.dart` - Add long-press and rename dialog
+- `lib/data/repositories/recording_repository_impl.dart` - Add update title method
+- `lib/presentation/features/recording/bloc/recording_bloc.dart` - Add rename events/states
+- `lib/presentation/features/recording/bloc/recording_event.dart` - Add rename event
+- `lib/presentation/features/recording/bloc/recording_state.dart` - Add rename states
+
+### Files to Create
+- `lib/presentation/features/home/widgets/date_header_widget.dart` - Date header component
+- `lib/presentation/features/home/widgets/rename_dialog.dart` - Rename dialog component
+- `lib/core/utils/date_grouping_utils.dart` - Date grouping utility functions
+
+### Technology Validation
+- [ ] Date grouping algorithm tested
+- [ ] Long-press gesture detection verified
+- [ ] Rename dialog functionality confirmed
+- [ ] Database update operations tested
+- [ ] UI performance with grouped data validated
+- [ ] Error handling and edge cases covered
+
 ## 🤖 NEW TASK: AI TRANSCRIPTION INTEGRATION
 
 ### Task: OpenAI Whisper API Integration for Audio Transcription

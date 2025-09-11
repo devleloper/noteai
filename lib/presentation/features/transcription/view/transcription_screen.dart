@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/recording.dart';
+import '../../recording/bloc/recording_bloc.dart';
+import '../../recording/bloc/recording_state.dart';
+import '../../recording/bloc/recording_event.dart';
 
 class TranscriptionScreen extends StatelessWidget {
   final Recording recording;
@@ -15,44 +19,54 @@ class TranscriptionScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(recording.title),
-        actions: [
-          if (recording.transcript != null && recording.transcript!.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () => _copyToClipboard(context),
-              tooltip: 'Copy to clipboard',
-            ),
-          if (recording.transcript != null && recording.transcript!.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => _shareTranscription(context),
-              tooltip: 'Share transcription',
-            ),
-        ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Recording metadata
-              _buildMetadataCard(context),
-              
-              const SizedBox(height: 16),
-              
-              // Transcription content
-              Expanded(
-                child: _buildTranscriptionContent(context),
+      body: BlocBuilder<RecordingBloc, RecordingState>(
+        builder: (context, state) {
+          // Get the most up-to-date recording from the current state
+          Recording currentRecording = recording;
+          
+          if (state is RecordingsLoaded) {
+            final updatedRecording = state.recordings.firstWhere(
+              (r) => r.id == recording.id,
+              orElse: () => recording,
+            );
+            currentRecording = updatedRecording;
+          } else if (state is TranscriptionProcessing) {
+            final updatedRecording = state.recordings.firstWhere(
+              (r) => r.id == recording.id,
+              orElse: () => recording,
+            );
+            currentRecording = updatedRecording;
+          } else if (state is TranscriptionCompleted) {
+            // If transcription just completed, we need to reload recordings
+            context.read<RecordingBloc>().add(LoadRecordingsRequested());
+          }
+          
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Recording metadata
+                  _buildMetadataCard(context, currentRecording),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Transcription content
+                  Expanded(
+                    child: _buildTranscriptionContent(context, currentRecording),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMetadataCard(BuildContext context) {
+  Widget _buildMetadataCard(BuildContext context, Recording currentRecording) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -79,29 +93,22 @@ class TranscriptionScreen extends StatelessWidget {
             _buildMetadataRow(
               context,
               'Duration',
-              _formatDuration(recording.duration),
+              _formatDuration(currentRecording.duration),
               Icons.timer,
             ),
             _buildMetadataRow(
               context,
               'Created',
-              _formatDateTime(recording.createdAt),
+              _formatDateTime(currentRecording.createdAt),
               Icons.calendar_today,
             ),
-            if (recording.transcriptionCompletedAt != null)
+            if (currentRecording.transcriptionCompletedAt != null)
               _buildMetadataRow(
                 context,
                 'Transcribed',
-                _formatDateTime(recording.transcriptionCompletedAt!),
+                _formatDateTime(currentRecording.transcriptionCompletedAt!),
                 Icons.text_snippet,
               ),
-            _buildMetadataRow(
-              context,
-              'Status',
-              _getTranscriptionStatusText(recording.transcriptionStatus),
-              _getTranscriptionStatusIcon(recording.transcriptionStatus),
-              statusColor: _getTranscriptionStatusColor(recording.transcriptionStatus, context),
-            ),
           ],
         ),
       ),
@@ -144,24 +151,24 @@ class TranscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTranscriptionContent(BuildContext context) {
-    if (recording.transcriptionStatus == TranscriptionStatus.failed) {
-      return _buildErrorState(context);
+  Widget _buildTranscriptionContent(BuildContext context, Recording currentRecording) {
+    if (currentRecording.transcriptionStatus == TranscriptionStatus.failed) {
+      return _buildErrorState(context, currentRecording);
     }
 
-    if (recording.transcriptionStatus == TranscriptionStatus.processing ||
-        recording.transcriptionStatus == TranscriptionStatus.pending) {
+    if (currentRecording.transcriptionStatus == TranscriptionStatus.processing ||
+        currentRecording.transcriptionStatus == TranscriptionStatus.pending) {
       return _buildLoadingState(context);
     }
 
-    if (recording.transcript == null || recording.transcript!.isEmpty) {
+    if (currentRecording.transcript == null || currentRecording.transcript!.isEmpty) {
       return _buildEmptyState(context);
     }
 
-    return _buildTranscriptionText(context);
+    return _buildTranscriptionText(context, currentRecording);
   }
 
-  Widget _buildErrorState(BuildContext context) {
+  Widget _buildErrorState(BuildContext context, Recording currentRecording) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -180,15 +187,17 @@ class TranscriptionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            recording.transcriptionError ?? 'Unknown error occurred',
+            currentRecording.transcriptionError ?? 'Unknown error occurred',
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              // TODO: Implement retry functionality
-              Navigator.of(context).pop();
+              // Retry transcription
+              context.read<RecordingBloc>().add(
+                StartTranscriptionRequested(currentRecording.id),
+              );
             },
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
@@ -251,7 +260,7 @@ class TranscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTranscriptionText(BuildContext context) {
+  Widget _buildTranscriptionText(BuildContext context, Recording currentRecording) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -274,7 +283,7 @@ class TranscriptionScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () => _copyToClipboard(context),
+                  onPressed: () => _copyToClipboard(context, currentRecording),
                   icon: const Icon(Icons.copy, size: 16),
                   label: const Text('Copy'),
                 ),
@@ -283,7 +292,7 @@ class TranscriptionScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Expanded(
               child: SelectableText(
-                recording.transcript!,
+                currentRecording.transcript!,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   height: 1.5,
                 ),
@@ -295,9 +304,9 @@ class TranscriptionScreen extends StatelessWidget {
     );
   }
 
-  void _copyToClipboard(BuildContext context) {
-    if (recording.transcript != null && recording.transcript!.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: recording.transcript!));
+  void _copyToClipboard(BuildContext context, Recording currentRecording) {
+    if (currentRecording.transcript != null && currentRecording.transcript!.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: currentRecording.transcript!));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Transcription copied to clipboard'),
@@ -307,17 +316,6 @@ class TranscriptionScreen extends StatelessWidget {
     }
   }
 
-  void _shareTranscription(BuildContext context) {
-    if (recording.transcript != null && recording.transcript!.isNotEmpty) {
-      // TODO: Implement sharing functionality
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sharing functionality coming soon'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -336,49 +334,5 @@ class TranscriptionScreen extends StatelessWidget {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  String _getTranscriptionStatusText(TranscriptionStatus status) {
-    switch (status) {
-      case TranscriptionStatus.notStarted:
-        return 'Not started';
-      case TranscriptionStatus.pending:
-        return 'Pending';
-      case TranscriptionStatus.processing:
-        return 'Processing';
-      case TranscriptionStatus.completed:
-        return 'Completed';
-      case TranscriptionStatus.failed:
-        return 'Failed';
-    }
-  }
-
-  IconData _getTranscriptionStatusIcon(TranscriptionStatus status) {
-    switch (status) {
-      case TranscriptionStatus.notStarted:
-        return Icons.radio_button_unchecked;
-      case TranscriptionStatus.pending:
-        return Icons.schedule;
-      case TranscriptionStatus.processing:
-        return Icons.sync;
-      case TranscriptionStatus.completed:
-        return Icons.check_circle;
-      case TranscriptionStatus.failed:
-        return Icons.error;
-    }
-  }
-
-  Color _getTranscriptionStatusColor(TranscriptionStatus status, BuildContext context) {
-    switch (status) {
-      case TranscriptionStatus.notStarted:
-        return Colors.grey;
-      case TranscriptionStatus.pending:
-        return Colors.orange;
-      case TranscriptionStatus.processing:
-        return Theme.of(context).colorScheme.primary;
-      case TranscriptionStatus.completed:
-        return Colors.green;
-      case TranscriptionStatus.failed:
-        return Theme.of(context).colorScheme.error;
-    }
-  }
 }
 

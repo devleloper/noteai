@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/recording.dart';
 import '../../player/widgets/mini_player_widget.dart';
@@ -7,32 +8,78 @@ import '../../recording/bloc/recording_state.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../transcription/view/transcription_screen.dart';
 import '../../chat/view/chat_screen.dart';
+import 'rename_dialog.dart';
 
-class RecordingCard extends StatelessWidget {
+class RecordingCard extends StatefulWidget {
   final Recording recording;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final ValueChanged<String>? onRename;
 
   const RecordingCard({
     super.key,
     required this.recording,
     required this.onTap,
     required this.onDelete,
+    this.onRename,
   });
+
+  @override
+  State<RecordingCard> createState() => _RecordingCardState();
+}
+
+class _RecordingCardState extends State<RecordingCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     // Debug logging to track state updates
-    print('RecordingCard building for recording: ${recording.id}');
-    print('Transcription status: ${recording.transcriptionStatus}');
-    print('Has transcript: ${recording.transcript?.isNotEmpty ?? false}');
+    print('RecordingCard building for recording: ${widget.recording.id}');
+    print('Transcription status: ${widget.recording.transcriptionStatus}');
+    print('Has transcript: ${widget.recording.transcript?.isNotEmpty ?? false}');
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GestureDetector(
+              onTap: widget.onTap,
+              onLongPress: widget.onRename != null ? () => _showRenameDialog(context) : null,
+              onLongPressStart: (_) => _animationController.forward(),
+              onLongPressEnd: (_) => _animationController.reverse(),
+              onLongPressCancel: () => _animationController.reverse(),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,7 +90,7 @@ class RecordingCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      recording.title,
+                      widget.recording.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -51,7 +98,7 @@ class RecordingCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    _formatDuration(recording.duration),
+                    _formatDuration(widget.recording.duration),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
@@ -65,22 +112,22 @@ class RecordingCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    _getStatusIcon(recording.status),
+                    _getStatusIcon(widget.recording.status),
                     size: 16,
-                    color: _getStatusColor(recording.status, context),
+                    color: _getStatusColor(widget.recording.status, context),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    _getStatusText(recording.status),
+                    _getStatusText(widget.recording.status),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _getStatusColor(recording.status, context),
+                      color: _getStatusColor(widget.recording.status, context),
                     ),
                   ),
-                  if (recording.progress < 1.0 && recording.status == RecordingStatus.processing) ...[
+                  if (widget.recording.progress < 1.0 && widget.recording.status == RecordingStatus.processing) ...[
                     const SizedBox(width: 8),
                     Expanded(
                       child: LinearProgressIndicator(
-                        value: recording.progress,
+                        value: widget.recording.progress,
                         backgroundColor: Colors.grey[300],
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Theme.of(context).colorScheme.primary,
@@ -92,16 +139,16 @@ class RecordingCard extends StatelessWidget {
               ),
               
               // Transcription status
-              if (recording.transcriptionStatus != TranscriptionStatus.notStarted) ...[
+              if (widget.recording.transcriptionStatus != TranscriptionStatus.notStarted) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     _buildTranscriptionStatusIndicator(context),
                     const SizedBox(width: 4),
                     Text(
-                      _getTranscriptionStatusText(recording.transcriptionStatus),
+                      _getTranscriptionStatusText(widget.recording.transcriptionStatus),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _getTranscriptionStatusColor(recording.transcriptionStatus, context),
+                        color: _getTranscriptionStatusColor(widget.recording.transcriptionStatus, context),
                       ),
                     ),
                   ],
@@ -124,7 +171,7 @@ class RecordingCard extends StatelessWidget {
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         builder: (context) => MiniPlayerWidget(
-                          recording: recording,
+                          recording: widget.recording,
                           onClose: () => Navigator.of(context).pop(),
                         ),
                       );
@@ -138,7 +185,7 @@ class RecordingCard extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => ChatScreen(recordingId: recording.id),
+                          builder: (context) => ChatScreen(recordingId: widget.recording.id),
                         ),
                       );
                     },
@@ -147,7 +194,7 @@ class RecordingCard extends StatelessWidget {
                     context: context,
                     icon: Icons.delete,
                     label: 'Delete',
-                    onPressed: onDelete,
+                    onPressed: widget.onDelete,
                     isDestructive: true,
                   ),
                 ],
@@ -155,8 +202,11 @@ class RecordingCard extends StatelessWidget {
             ],
           ),
         ),
+        ),
       ),
-    );
+        ),
+      );
+    });
   }
 
   Widget _buildActionButton({
@@ -275,7 +325,7 @@ class RecordingCard extends StatelessWidget {
       builder: (context, state) {
         // Check if this recording is currently being transcribed
         bool isTranscribing = false;
-        if (state is TranscriptionProcessing && state.recordingId == recording.id) {
+        if (state is TranscriptionProcessing && state.recordingId == widget.recording.id) {
           isTranscribing = true;
         }
 
@@ -284,35 +334,35 @@ class RecordingCard extends StatelessWidget {
           icon: isTranscribing ? Icons.sync : Icons.text_snippet,
           label: isTranscribing ? 'Transcribing' : 'Transcribe',
           onPressed: () {
-            print('Transcription button pressed for recording: ${recording.id}');
-            print('Current transcription status: ${recording.transcriptionStatus}');
-            print('Has transcript: ${recording.transcript?.isNotEmpty ?? false}');
-            print('Transcript length: ${recording.transcript?.length ?? 0}');
+            print('Transcription button pressed for recording: ${widget.recording.id}');
+            print('Current transcription status: ${widget.recording.transcriptionStatus}');
+            print('Has transcript: ${widget.recording.transcript?.isNotEmpty ?? false}');
+            print('Transcript length: ${widget.recording.transcript?.length ?? 0}');
             
             // Check for completed transcription or existing transcript
-            if (recording.transcriptionStatus == TranscriptionStatus.completed || 
-                (recording.transcript?.isNotEmpty ?? false)) {
+            if (widget.recording.transcriptionStatus == TranscriptionStatus.completed || 
+                (widget.recording.transcript?.isNotEmpty ?? false)) {
               // Navigate to transcription screen
               print('Navigating to transcription screen');
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => TranscriptionScreen(recording: recording),
+                  builder: (context) => TranscriptionScreen(recording: widget.recording),
                 ),
               );
-            } else if (recording.transcriptionStatus == TranscriptionStatus.failed) {
+            } else if (widget.recording.transcriptionStatus == TranscriptionStatus.failed) {
               // Retry transcription
               print('Retrying transcription');
               context.read<RecordingBloc>().add(
-                StartTranscriptionRequested(recording.id),
+                StartTranscriptionRequested(widget.recording.id),
               );
-            } else if (recording.transcriptionStatus == TranscriptionStatus.notStarted) {
+            } else if (widget.recording.transcriptionStatus == TranscriptionStatus.notStarted) {
               // Start transcription
               print('Starting transcription');
               context.read<RecordingBloc>().add(
-                StartTranscriptionRequested(recording.id),
+                StartTranscriptionRequested(widget.recording.id),
               );
             } else {
-              print('Transcription button pressed but no action taken. Status: ${recording.transcriptionStatus}');
+              print('Transcription button pressed but no action taken. Status: ${widget.recording.transcriptionStatus}');
             }
           },
           isLoading: isTranscribing,
@@ -322,7 +372,7 @@ class RecordingCard extends StatelessWidget {
   }
 
   Widget _buildTranscriptionStatusIndicator(BuildContext context) {
-    switch (recording.transcriptionStatus) {
+    switch (widget.recording.transcriptionStatus) {
       case TranscriptionStatus.pending:
         return Icon(
           Icons.schedule,
@@ -385,5 +435,20 @@ class RecordingCard extends StatelessWidget {
       case TranscriptionStatus.notStarted:
         return Colors.grey;
     }
+  }
+
+  void _showRenameDialog(BuildContext context) {
+    // Provide haptic feedback
+    HapticFeedback.mediumImpact();
+    
+    showDialog(
+      context: context,
+      builder: (context) => RenameDialog(
+        currentTitle: widget.recording.title,
+        onSave: (newTitle) {
+          widget.onRename?.call(newTitle);
+        },
+      ),
+    );
   }
 }

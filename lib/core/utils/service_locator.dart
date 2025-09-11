@@ -28,6 +28,7 @@ import '../../domain/usecases/recording/start_recording.dart';
 import '../../domain/usecases/recording/stop_recording.dart';
 import '../../domain/usecases/recording/get_recordings.dart';
 import '../../domain/usecases/recording/delete_recording.dart';
+import '../../domain/usecases/recording/update_recording.dart';
 import '../../domain/usecases/transcription/start_transcription.dart';
 import '../../domain/usecases/transcription/update_transcription.dart';
 import '../../domain/usecases/auth/sign_in_with_google.dart';
@@ -97,6 +98,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => StopRecording(sl()));
   sl.registerLazySingleton(() => GetRecordings(sl()));
   sl.registerLazySingleton(() => DeleteRecording(sl()));
+  sl.registerLazySingleton(() => UpdateRecording(sl()));
   sl.registerLazySingleton(() => StartTranscription(sl()));
   sl.registerLazySingleton(() => UpdateTranscription(sl()));
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));

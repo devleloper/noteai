@@ -31,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late ChatBloc _chatBloc;
+  int _lastMessageCount = 0;
 
   @override
   void initState() {
@@ -44,6 +45,13 @@ class _ChatScreenState extends State<ChatScreen> {
       uuid: const uuid_package.Uuid(),
     );
     _chatBloc.add(LoadChatSession(widget.recordingId));
+    
+    // Auto-scroll to bottom when the widget is first built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -111,6 +119,31 @@ class _ChatScreenState extends State<ChatScreen> {
                 backgroundColor: Colors.green,
               ),
             );
+            // Auto-scroll to show the generated summary
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          } else if (state is ChatLoaded) {
+            // Auto-scroll to bottom when new messages are received
+            final currentMessageCount = state.messages.length + (state.session.hasSummary ? 1 : 0);
+            if (currentMessageCount > _lastMessageCount) {
+              _lastMessageCount = currentMessageCount;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    _scrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                }
+              });
+            }
           }
         },
         builder: (context, state) {

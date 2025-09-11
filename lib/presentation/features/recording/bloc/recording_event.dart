@@ -37,6 +37,19 @@ class DeleteRecordingRequested extends RecordingEvent {
   List<Object> get props => [recordingId];
 }
 
+class RenameRecordingRequested extends RecordingEvent {
+  final String recordingId;
+  final String newTitle;
+  
+  const RenameRecordingRequested({
+    required this.recordingId,
+    required this.newTitle,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, newTitle];
+}
+
 class RecordingProgressUpdated extends RecordingEvent {
   final String recordingId;
   final Duration duration;

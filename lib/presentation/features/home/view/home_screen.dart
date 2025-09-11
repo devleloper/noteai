@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/recording.dart';
+import '../../../../core/utils/date_grouping_utils.dart';
 import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../recording/bloc/recording_state.dart';
@@ -8,6 +9,7 @@ import '../../recording/view/recording_screen.dart';
 import '../../search/view/search_screen.dart';
 import '../../settings/view/settings_screen.dart';
 import '../widgets/recording_card.dart';
+import '../widgets/date_header_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -141,7 +143,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecordingsList(BuildContext context, recordings) {
+  Widget _buildRecordingsList(BuildContext context, List<Recording> recordings) {
+    // Group recordings by date
+    final groupedItems = DateGroupingUtils.groupRecordingsByDate(recordings);
+    
     return BlocListener<RecordingBloc, RecordingState>(
       listener: (context, state) {
         if (state is TranscriptionCompleted) {
@@ -160,6 +165,22 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: Colors.red,
             ),
           );
+        } else if (state is RecordingRenamed) {
+          // Show rename success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Recording renamed to "${state.newTitle}"'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is RecordingRenameError) {
+          // Show rename error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to rename recording: ${state.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       },
       child: RefreshIndicator(
@@ -167,47 +188,63 @@ class _HomeScreenState extends State<HomeScreen> {
           context.read<RecordingBloc>().add(LoadRecordingsRequested());
         },
         child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: recordings.length,
-        itemBuilder: (context, index) {
-          final recording = recordings[index];
-          return BlocBuilder<RecordingBloc, RecordingState>(
-            builder: (context, state) {
-              // Get the most up-to-date recording from the current state
-              Recording? updatedRecording;
-              if (state is RecordingsLoaded) {
-                updatedRecording = state.recordings.firstWhere(
-                  (r) => r.id == recording.id,
-                  orElse: () => recording,
-                );
-              } else if (state is TranscriptionPending) {
-                updatedRecording = state.recordings.firstWhere(
-                  (r) => r.id == recording.id,
-                  orElse: () => recording,
-                );
-              } else if (state is TranscriptionProcessing) {
-                updatedRecording = state.recordings.firstWhere(
-                  (r) => r.id == recording.id,
-                  orElse: () => recording,
-                );
-              } else {
-                updatedRecording = recording;
-              }
-              
-              return RecordingCard(
-                recording: updatedRecording!,
-                onTap: () {
-                  // TODO: Navigate to recording detail
-                },
-                onDelete: () {
-                  _showDeleteDialog(context, updatedRecording!.id);
+          padding: const EdgeInsets.all(16),
+          itemCount: groupedItems.length,
+          itemBuilder: (context, index) {
+            final item = groupedItems[index];
+            
+            if (item.isDateHeader) {
+              return DateHeaderWidget(dateHeader: item as DateHeaderItem);
+            } else if (item.isRecording) {
+              final recording = (item as RecordingItem).recording;
+              return BlocBuilder<RecordingBloc, RecordingState>(
+                builder: (context, state) {
+                  // Get the most up-to-date recording from the current state
+                  Recording? updatedRecording;
+                  if (state is RecordingsLoaded) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else if (state is TranscriptionPending) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else if (state is TranscriptionProcessing) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else {
+                    updatedRecording = recording;
+                  }
+                  
+                  return RecordingCard(
+                    recording: updatedRecording!,
+                    onTap: () {
+                      // TODO: Navigate to recording detail
+                    },
+                    onDelete: () {
+                      _showDeleteDialog(context, updatedRecording!.id);
+                    },
+                    onRename: (newTitle) {
+                      context.read<RecordingBloc>().add(
+                        RenameRecordingRequested(
+                          recordingId: updatedRecording!.id,
+                          newTitle: newTitle,
+                        ),
+                      );
+                    },
+                  );
                 },
               );
-            },
-          );
-        },
+            }
+            
+            return const SizedBox.shrink();
+          },
+        ),
       ),
-    ),
     );
   }
 

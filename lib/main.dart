@@ -58,6 +58,7 @@ class NoteAIApp extends StatelessWidget {
             stopRecording: di.sl(),
             getRecordings: di.sl(),
             deleteRecording: di.sl(),
+            updateRecording: di.sl(),
             startTranscription: di.sl(),
             updateTranscription: di.sl(),
             createSession: di.sl<CreateSession>(),

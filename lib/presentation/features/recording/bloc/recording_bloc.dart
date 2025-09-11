@@ -5,6 +5,7 @@ import '../../../../domain/usecases/recording/start_recording.dart';
 import '../../../../domain/usecases/recording/stop_recording.dart';
 import '../../../../domain/usecases/recording/get_recordings.dart';
 import '../../../../domain/usecases/recording/delete_recording.dart';
+import '../../../../domain/usecases/recording/update_recording.dart';
 import '../../../../domain/usecases/transcription/start_transcription.dart';
 import '../../../../domain/usecases/transcription/update_transcription.dart';
 import '../../../../domain/usecases/chat/create_session.dart';
@@ -24,6 +25,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   final StopRecording _stopRecording;
   final GetRecordings _getRecordings;
   final DeleteRecording _deleteRecording;
+  final UpdateRecording _updateRecording;
   final StartTranscription _startTranscription;
   final UpdateTranscription _updateTranscription;
   final CreateSession _createSession;
@@ -37,6 +39,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     required StopRecording stopRecording,
     required GetRecordings getRecordings,
     required DeleteRecording deleteRecording,
+    required UpdateRecording updateRecording,
     required StartTranscription startTranscription,
     required UpdateTranscription updateTranscription,
     required CreateSession createSession,
@@ -45,6 +48,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
        _stopRecording = stopRecording,
        _getRecordings = getRecordings,
        _deleteRecording = deleteRecording,
+       _updateRecording = updateRecording,
        _startTranscription = startTranscription,
        _updateTranscription = updateTranscription,
        _createSession = createSession,
@@ -57,6 +61,7 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     on<StopRecordingRequested>(_onStopRecordingRequested);
     on<LoadRecordingsRequested>(_onLoadRecordingsRequested);
     on<DeleteRecordingRequested>(_onDeleteRecordingRequested);
+    on<RenameRecordingRequested>(_onRenameRecordingRequested);
     on<RecordingProgressUpdated>(_onRecordingProgressUpdated);
     on<StartTranscriptionRequested>(_onStartTranscriptionRequested);
     on<TranscriptionProcessingEvent>(_onTranscriptionProcessing);
@@ -177,6 +182,43 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
         add(LoadRecordingsRequested());
       },
     );
+  }
+  
+  void _onRenameRecordingRequested(
+    RenameRecordingRequested event,
+    Emitter<RecordingState> emit,
+  ) async {
+    try {
+      // Get the current recording
+      final recordingsResult = await _getRecordings(NoParams());
+      if (recordingsResult.isLeft()) {
+        final failure = recordingsResult.fold((l) => l, (r) => throw Exception('Unexpected right value'));
+        emit(RecordingRenameError(recordingId: event.recordingId, error: failure.message));
+        return;
+      }
+      
+      final recordings = recordingsResult.fold((l) => throw Exception('Unexpected left value'), (r) => r);
+      final recording = recordings.firstWhere(
+        (r) => r.id == event.recordingId,
+        orElse: () => throw Exception('Recording not found'),
+      );
+      
+      // Create updated recording with new title
+      final updatedRecording = recording.copyWith(title: event.newTitle.trim());
+      
+      // Update the recording
+      final result = await _updateRecording(UpdateRecordingParams(recording: updatedRecording));
+      result.fold(
+        (failure) => emit(RecordingRenameError(recordingId: event.recordingId, error: failure.message)),
+        (_) {
+          emit(RecordingRenamed(recordingId: event.recordingId, newTitle: event.newTitle.trim()));
+          // Reload recordings to reflect the change
+          add(LoadRecordingsRequested());
+        },
+      );
+    } catch (e) {
+      emit(RecordingRenameError(recordingId: event.recordingId, error: e.toString()));
+    }
   }
   
   void _onRecordingProgressUpdated(
