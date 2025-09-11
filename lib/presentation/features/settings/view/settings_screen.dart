@@ -4,6 +4,10 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../widgets/language_tile.dart';
+import '../bloc/settings_bloc.dart';
+import '../bloc/settings_event.dart';
+import '../bloc/settings_state.dart';
+import '../../../../core/utils/service_locator.dart' as di;
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,7 +23,31 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
+        builder: (context, authState) {
+          return BlocProvider(
+            create: (context) => di.sl<SettingsBloc>()..add(LoadUserPreferences()),
+            child: BlocConsumer<SettingsBloc, SettingsState>(
+              listener: (context, settingsState) {
+                if (settingsState is SettingsUpdated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(settingsState.message),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  // Refresh AuthBloc to update user data
+                  context.read<AuthBloc>().add(AuthRefreshUserRequested());
+                } else if (settingsState is SettingsError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(settingsState.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              builder: (context, settingsState) {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -35,26 +63,26 @@ class SettingsScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 16),
-                      if (state is AuthAuthenticated) ...[
+                      if (authState is AuthAuthenticated) ...[
                         ListTile(
                           leading: CircleAvatar(
-                            backgroundImage: state.user.photoUrl != null
-                                ? NetworkImage(state.user.photoUrl!)
+                            backgroundImage: authState.user.photoUrl != null
+                                ? NetworkImage(authState.user.photoUrl!)
                                 : null,
-                            child: state.user.photoUrl == null
+                            child: authState.user.photoUrl == null
                                 ? Text(
-                                    state.user.displayName.isNotEmpty
-                                        ? state.user.displayName[0].toUpperCase()
+                                    authState.user.displayName.isNotEmpty
+                                        ? authState.user.displayName[0].toUpperCase()
                                         : 'U',
                                   )
                                 : null,
                           ),
                           title: Text(
-                            state.user.displayName.isNotEmpty ? state.user.displayName : 'User',
+                            authState.user.displayName.isNotEmpty ? authState.user.displayName : 'User',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           subtitle: Text(
-                            state.user.email,
+                            authState.user.email,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -75,16 +103,30 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               
               // Language Settings
-              if (state is AuthAuthenticated)
-                LanguageTile(
-                  selectedLanguageCode: state.user.preferences.language,
-                  onLanguageChanged: (languageCode) {
-                    // TODO: Implement language change
-                    _updateUserLanguage(context, languageCode);
+              if (authState is AuthAuthenticated) ...[
+                Builder(
+                  builder: (context) {
+                    String languageCode = authState.user.preferences.language;
+                    
+                    if (settingsState is SettingsLoaded) {
+                      languageCode = settingsState.preferences.language;
+                    } else if (settingsState is SettingsUpdating) {
+                      languageCode = settingsState.preferences.language;
+                    } else if (settingsState is SettingsUpdated) {
+                      languageCode = settingsState.preferences.language;
+                    }
+                    
+                    return LanguageTile(
+                      selectedLanguageCode: languageCode,
+                      onLanguageChanged: (newLanguageCode) {
+                        context.read<SettingsBloc>().add(UpdateLanguageRequested(newLanguageCode));
+                      },
+                    );
                   },
                 ),
+              ],
               
-              if (state is AuthAuthenticated) const SizedBox(height: 16),
+              if (authState is AuthAuthenticated) const SizedBox(height: 16),
               
               // Settings Options
               Card(
@@ -141,7 +183,7 @@ class SettingsScreen extends StatelessWidget {
               Card(
                 child: Column(
                   children: [
-                    if (state is AuthAuthenticated) ...[
+                    if (authState is AuthAuthenticated) ...[
                       ListTile(
                         leading: const Icon(Icons.logout, color: Colors.red),
                         title: const Text(
@@ -181,6 +223,9 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           );
+              },
+            ),
+          );
         },
       ),
     );
@@ -212,14 +257,4 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _updateUserLanguage(BuildContext context, String languageCode) {
-    // TODO: Implement language update using UpdateUserPreferences use case
-    // For now, just show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Language changed to: $languageCode'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 }

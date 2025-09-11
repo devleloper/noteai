@@ -30,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignInWithGoogleRequested>(_onSignInWithGoogleRequested);
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthUserChanged>(_onUserChanged);
+    on<AuthRefreshUserRequested>(_onRefreshUserRequested);
   }
   
   void _onAuthCheckRequested(
@@ -111,6 +112,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
     } else {
       emit(AuthUnauthenticated());
+    }
+  }
+
+  void _onRefreshUserRequested(
+    AuthRefreshUserRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is AuthAuthenticated) {
+      // Refresh user data from server
+      final result = await _getCurrentUser(NoParams());
+      result.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (userData) {
+          if (userData != null) {
+            emit(AuthAuthenticated(userData));
+          } else {
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
     }
   }
 }

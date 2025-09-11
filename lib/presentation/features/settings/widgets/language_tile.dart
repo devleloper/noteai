@@ -23,11 +23,13 @@ class LanguageTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           child: Text(
-            language.nativeName.isNotEmpty ? language.nativeName[0] : language.name[0],
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            ),
+            language.countryEmoji ?? (language.nativeName.isNotEmpty ? language.nativeName[0] : language.name[0]),
+            style: language.countryEmoji != null 
+                ? const TextStyle(fontSize: 20)
+                : TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
           ),
         ),
         title: const Text('Summary Language'),
@@ -49,29 +51,7 @@ class LanguageTile extends StatelessWidget {
               ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (language.isPopular)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Popular',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right),
-          ],
-        ),
+        trailing: const Icon(Icons.chevron_right),
         onTap: () => _showLanguagePicker(context),
       ),
     );

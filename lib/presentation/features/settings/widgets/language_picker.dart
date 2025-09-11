@@ -19,10 +19,8 @@ class LanguagePicker extends StatefulWidget {
 class _LanguagePickerState extends State<LanguagePicker> {
   late TextEditingController _searchController;
   List<Language> _filteredLanguages = [];
-  List<Language> _popularLanguages = [];
   List<String> _regions = [];
   String _selectedRegion = 'All';
-  bool _showOnlyPopular = false;
 
   @override
   void initState() {
@@ -38,7 +36,6 @@ class _LanguagePickerState extends State<LanguagePicker> {
   }
 
   void _loadLanguages() {
-    _popularLanguages = SupportedLanguages.getPopularLanguages();
     _regions = ['All', ...SupportedLanguages.getAllRegions()];
     _filterLanguages();
   }
@@ -46,9 +43,7 @@ class _LanguagePickerState extends State<LanguagePicker> {
   void _filterLanguages() {
     final query = _searchController.text.toLowerCase();
     
-    if (_showOnlyPopular) {
-      _filteredLanguages = _popularLanguages;
-    } else if (_selectedRegion == 'All') {
+    if (_selectedRegion == 'All') {
       _filteredLanguages = SupportedLanguages.getAllLanguages();
     } else {
       _filteredLanguages = SupportedLanguages.getLanguagesByRegion(_selectedRegion);
@@ -70,18 +65,6 @@ class _LanguagePickerState extends State<LanguagePicker> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(_showOnlyPopular ? Icons.star : Icons.star_border),
-            onPressed: () {
-              setState(() {
-                _showOnlyPopular = !_showOnlyPopular;
-              });
-              _filterLanguages();
-            },
-            tooltip: _showOnlyPopular ? 'Show all languages' : 'Show popular languages',
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -113,7 +96,7 @@ class _LanguagePickerState extends State<LanguagePicker> {
           ),
 
           // Region Filter
-          if (!_showOnlyPopular && _searchController.text.isEmpty)
+          if (_searchController.text.isEmpty)
             Container(
               height: 50,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -201,13 +184,15 @@ class _LanguagePickerState extends State<LanguagePicker> {
               ? Theme.of(context).colorScheme.primary
               : Theme.of(context).colorScheme.surfaceVariant,
           child: Text(
-            language.nativeName.isNotEmpty ? language.nativeName[0] : language.name[0],
-            style: TextStyle(
-              color: isSelected 
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
-            ),
+            language.countryEmoji ?? (language.nativeName.isNotEmpty ? language.nativeName[0] : language.name[0]),
+            style: language.countryEmoji != null 
+                ? const TextStyle(fontSize: 20)
+                : TextStyle(
+                    color: isSelected 
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                  ),
           ),
         ),
         title: Text(
@@ -219,50 +204,16 @@ class _LanguagePickerState extends State<LanguagePicker> {
                 : Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (language.nativeName != language.name)
-              Text(
+        subtitle: language.nativeName != language.name
+            ? Text(
                 language.nativeName,
                 style: TextStyle(
                   color: isSelected 
                       ? Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8)
                       : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
-              ),
-            Row(
-              children: [
-                if (language.isPopular)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Popular',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSecondary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                Text(
-                  '${language.region} • ${language.script}',
-                  style: TextStyle(
-                    color: isSelected 
-                        ? Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.6)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              )
+            : null,
         trailing: isSelected
             ? Icon(
                 Icons.check_circle,

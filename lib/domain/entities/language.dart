@@ -6,6 +6,7 @@ class Language extends Equatable {
   final String nativeName;
   final String region;
   final String script;
+  final String? countryEmoji;
   final bool isPopular;
   final int sortOrder;
 
@@ -15,6 +16,7 @@ class Language extends Equatable {
     required this.nativeName,
     required this.region,
     required this.script,
+    this.countryEmoji,
     this.isPopular = false,
     this.sortOrder = 0,
   });
@@ -26,6 +28,7 @@ class Language extends Equatable {
         nativeName,
         region,
         script,
+        countryEmoji ?? '',
         isPopular,
         sortOrder,
       ];
@@ -36,6 +39,7 @@ class Language extends Equatable {
     String? nativeName,
     String? region,
     String? script,
+    String? countryEmoji,
     bool? isPopular,
     int? sortOrder,
   }) {
@@ -45,6 +49,7 @@ class Language extends Equatable {
       nativeName: nativeName ?? this.nativeName,
       region: region ?? this.region,
       script: script ?? this.script,
+      countryEmoji: countryEmoji ?? this.countryEmoji,
       isPopular: isPopular ?? this.isPopular,
       sortOrder: sortOrder ?? this.sortOrder,
     );
@@ -52,6 +57,6 @@ class Language extends Equatable {
 
   @override
   String toString() {
-    return 'Language(code: $code, name: $name, nativeName: $nativeName, region: $region, script: $script, isPopular: $isPopular, sortOrder: $sortOrder)';
+    return 'Language(code: $code, name: $name, nativeName: $nativeName, region: $region, script: $script, countryEmoji: $countryEmoji, isPopular: $isPopular, sortOrder: $sortOrder)';
   }
 }
