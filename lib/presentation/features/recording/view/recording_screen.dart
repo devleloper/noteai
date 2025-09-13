@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/recording_bloc.dart';
 import '../bloc/recording_event.dart';
 import '../bloc/recording_state.dart';
+import 'stealth_recording_screen.dart';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -46,6 +48,13 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 Navigator.of(context).pop();
               }
             });
+          } else if (state is StealthActivating) {
+            // Navigate to stealth screen when activation starts
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const StealthRecordingScreen(),
+              ),
+            );
           }
         },
         builder: (context, state) {
@@ -54,6 +63,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
               padding: const EdgeInsets.all(32.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Recording Status
                   Text(
@@ -61,35 +71,41 @@ class _RecordingScreenState extends State<RecordingScreen> {
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   
                   const SizedBox(height: 48),
                   
-                  // Recording Icon Button
-                  GestureDetector(
-                    onTap: () => _handleMainAction(state),
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: state is RecordingInProgress 
-                            ? Theme.of(context).colorScheme.error
-                            : Theme.of(context).colorScheme.primary,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (state is RecordingInProgress 
-                                ? Theme.of(context).colorScheme.error
-                                : Theme.of(context).colorScheme.primary).withOpacity(0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        state is RecordingInProgress ? Icons.stop : Icons.mic,
-                        size: 60,
-                        color: Colors.white,
+                  // Recording Icon Button with Long Press Support
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => _handleMainAction(state),
+                      onLongPressStart: (_) => _handleLongPressStart(state),
+                      onLongPressEnd: (_) => _handleLongPressEnd(),
+                      onLongPressCancel: _handleLongPressCancel,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: state is RecordingInProgress 
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (state is RecordingInProgress 
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary).withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          state is RecordingInProgress ? Icons.stop : Icons.mic,
+                          size: 60,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -101,6 +117,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                     Text(
                       'Duration: ${_formatDuration(state.duration)}',
                       style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -108,6 +125,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   
@@ -115,7 +133,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                   Text(
                     state is RecordingInProgress 
                         ? 'Tap the red button to stop recording'
-                        : 'Tap the blue button to start recording',
+                        : 'Tap to start recording • Long-press for stealth mode',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
@@ -136,28 +154,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                         prefixIcon: const Icon(Icons.title),
                       ),
                     ),
-                    const SizedBox(height: 32),
                   ],
-                  
-                  // Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _handleMainAction(state),
-                      icon: Icon(
-                        state is RecordingInProgress ? Icons.stop : Icons.mic,
-                      ),
-                      label: Text(
-                        state is RecordingInProgress ? 'Stop Recording' : 'Start Recording',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -179,6 +176,21 @@ class _RecordingScreenState extends State<RecordingScreen> {
         StartRecordingRequested(_titleController.text.trim()),
       );
     }
+  }
+
+  void _handleLongPressStart(RecordingState state) {
+    if (state is! RecordingInProgress && state is! RecordingLoading) {
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _handleLongPressEnd() {
+    // Long press completed - activate stealth mode
+    context.read<RecordingBloc>().add(const StealthModeRequested());
+  }
+
+  void _handleLongPressCancel() {
+    // Long press cancelled - do nothing
   }
 
   String _getStatusText(RecordingState state) {

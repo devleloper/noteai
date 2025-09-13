@@ -37,8 +37,20 @@ class TranscriptionScreen extends StatelessWidget {
               orElse: () => recording,
             );
             currentRecording = updatedRecording;
+          } else if (state is TranscriptionRegenerating) {
+            final updatedRecording = state.recordings.firstWhere(
+              (r) => r.id == recording.id,
+              orElse: () => recording,
+            );
+            currentRecording = updatedRecording;
           } else if (state is TranscriptionCompleted) {
             // If transcription just completed, we need to reload recordings
+            context.read<RecordingBloc>().add(LoadRecordingsRequested());
+          } else if (state is TranscriptionRegenerationCompleted) {
+            // If regeneration just completed, we need to reload recordings
+            context.read<RecordingBloc>().add(LoadRecordingsRequested());
+          } else if (state is TranscriptionRegenerationFailed) {
+            // If regeneration failed, we need to reload recordings
             context.read<RecordingBloc>().add(LoadRecordingsRequested());
           }
           
@@ -158,14 +170,14 @@ class TranscriptionScreen extends StatelessWidget {
 
     if (currentRecording.transcriptionStatus == TranscriptionStatus.processing ||
         currentRecording.transcriptionStatus == TranscriptionStatus.pending) {
-      return _buildLoadingState(context);
+      return _buildLoadingState(context, false);
     }
 
     if (currentRecording.transcript == null || currentRecording.transcript!.isEmpty) {
       return _buildEmptyState(context);
     }
 
-    return _buildTranscriptionText(context, currentRecording);
+    return _buildTranscriptionText(context, currentRecording, true);
   }
 
   Widget _buildErrorState(BuildContext context, Recording currentRecording) {
@@ -194,20 +206,20 @@ class TranscriptionScreen extends StatelessWidget {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              // Retry transcription
+              // Regenerate transcription
               context.read<RecordingBloc>().add(
-                StartTranscriptionRequested(currentRecording.id),
+                RegenerateTranscriptionRequested(currentRecording.id),
               );
             },
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: const Text('Regenerate'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingState(BuildContext context) {
+  Widget _buildLoadingState(BuildContext context, [bool isRegeneration = false]) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -219,7 +231,7 @@ class TranscriptionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Transcribing audio...',
+            isRegeneration ? 'Regenerating transcription...' : 'Transcribing audio...',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -260,7 +272,7 @@ class TranscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTranscriptionText(BuildContext context, Recording currentRecording) {
+  Widget _buildTranscriptionText(BuildContext context, Recording currentRecording, [bool showRegenerateButton = false]) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -282,6 +294,14 @@ class TranscriptionScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+                if (showRegenerateButton) ...[
+                  TextButton.icon(
+                    onPressed: () => _regenerateTranscription(context, currentRecording),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Regenerate'),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 TextButton.icon(
                   onPressed: () => _copyToClipboard(context, currentRecording),
                   icon: const Icon(Icons.copy, size: 16),
@@ -314,6 +334,37 @@ class TranscriptionScreen extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _regenerateTranscription(BuildContext context, Recording currentRecording) {
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Regenerate Transcription'),
+          content: const Text(
+            'This will regenerate the transcription for this recording. The current transcription will be replaced. Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Start regeneration
+                context.read<RecordingBloc>().add(
+                  RegenerateTranscriptionRequested(currentRecording.id),
+                );
+              },
+              child: const Text('Regenerate'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
 

@@ -122,6 +122,49 @@ class TranscriptionCompleted extends RecordingState {
   List<Object> get props => [recordingId, transcript];
 }
 
+class TranscriptionRegenerating extends RecordingState {
+  final String recordingId;
+  final List<Recording> recordings;
+  
+  const TranscriptionRegenerating({
+    required this.recordingId,
+    required this.recordings,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, recordings];
+}
+
+class TranscriptionRegenerationCompleted extends RecordingState {
+  final String recordingId;
+  final String transcript;
+  final List<Recording> recordings;
+  
+  const TranscriptionRegenerationCompleted({
+    required this.recordingId,
+    required this.transcript,
+    required this.recordings,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, transcript, recordings];
+}
+
+class TranscriptionRegenerationFailed extends RecordingState {
+  final String recordingId;
+  final String error;
+  final List<Recording> recordings;
+  
+  const TranscriptionRegenerationFailed({
+    required this.recordingId,
+    required this.error,
+    required this.recordings,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, error, recordings];
+}
+
 class TranscriptionError extends RecordingState {
   final String recordingId;
   final String error;
@@ -133,4 +176,36 @@ class TranscriptionError extends RecordingState {
   
   @override
   List<Object> get props => [recordingId, error];
+}
+
+// Stealth Mode States
+class StealthActivating extends RecordingState {
+  final double progress; // 0.0 to 1.0
+  
+  const StealthActivating(this.progress);
+  
+  @override
+  List<Object> get props => [progress];
+}
+
+class StealthActive extends RecordingState {
+  final String recordingId;
+  final Duration duration;
+  
+  const StealthActive({
+    required this.recordingId,
+    required this.duration,
+  });
+  
+  @override
+  List<Object> get props => [recordingId, duration];
+}
+
+class StealthDeactivating extends RecordingState {
+  final double progress; // 0.0 to 1.0
+  
+  const StealthDeactivating(this.progress);
+  
+  @override
+  List<Object> get props => [progress];
 }

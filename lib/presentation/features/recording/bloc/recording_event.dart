@@ -74,17 +74,28 @@ class StartTranscriptionRequested extends RecordingEvent {
   List<Object> get props => [recordingId];
 }
 
+class RegenerateTranscriptionRequested extends RecordingEvent {
+  final String recordingId;
+  
+  const RegenerateTranscriptionRequested(this.recordingId);
+  
+  @override
+  List<Object> get props => [recordingId];
+}
+
 class TranscriptionCompletedEvent extends RecordingEvent {
   final String recordingId;
   final String transcript;
+  final bool isRegeneration;
   
   const TranscriptionCompletedEvent({
     required this.recordingId,
     required this.transcript,
+    this.isRegeneration = false,
   });
   
   @override
-  List<Object> get props => [recordingId, transcript];
+  List<Object> get props => [recordingId, transcript, isRegeneration];
 }
 
 class TranscriptionFailedEvent extends RecordingEvent {
@@ -107,4 +118,17 @@ class TranscriptionProcessingEvent extends RecordingEvent {
   
   @override
   List<Object> get props => [recordingId];
+}
+
+// Stealth Mode Events
+class StealthModeRequested extends RecordingEvent {
+  const StealthModeRequested();
+}
+
+class StealthModeCancelled extends RecordingEvent {
+  const StealthModeCancelled();
+}
+
+class StealthRecordingStopped extends RecordingEvent {
+  const StealthRecordingStopped();
 }

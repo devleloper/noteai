@@ -12,6 +12,7 @@ import '../../data/datasources/local/realm_datasource.dart';
 import '../../data/datasources/local/audio_recording_service.dart';
 import '../../data/datasources/local/background_recording_service.dart';
 import '../../data/datasources/local/offline_task_queue.dart';
+import '../services/wake_lock_service.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
 import '../../data/datasources/remote/transcription_service.dart';
@@ -66,6 +67,7 @@ Future<void> init() async {
   sl.registerLazySingleton<AudioRecordingService>(() => AudioRecordingService());
   sl.registerLazySingleton<BackgroundRecordingService>(() => BackgroundRecordingService());
   sl.registerLazySingleton<OfflineTaskQueue>(() => OfflineTaskQueue());
+  sl.registerLazySingleton<WakeLockService>(() => WakeLockService());
   sl.registerLazySingleton<FirebaseDataSource>(
     () => FirebaseDataSourceImpl(sl(), sl()),
   );
