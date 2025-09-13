@@ -58,7 +58,8 @@ class TranscriptionService {
       final fileSize = await audioFile.length();
       const maxSize = 25 * 1024 * 1024; // 25MB
       if (fileSize > maxSize) {
-        throw TranscriptionException('Audio file too large: $fileSize bytes (max: $maxSize bytes)');
+        final fileSizeMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
+        throw TranscriptionException('Audio file too large: ${fileSizeMB}MB (${fileSize} bytes). Maximum allowed: 25MB. Consider using optimized recording settings.');
       }
       
       // Validate model
