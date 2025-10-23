@@ -1,0 +1,13 @@
+{
+  "name": "noteai-web",
+  "version": "1.0.0",
+  "description": "NoteAI - AI Voice Recording & Transcription Web App",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Build completed'",
+    "start": "echo 'Starting server'"
+  },
+  "keywords": ["flutter", "web", "ai", "voice", "recording", "transcription"],
+  "author": "Devlet",
+  "license": "MIT"
+}
