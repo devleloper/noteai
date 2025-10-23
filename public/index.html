@@ -36,16 +36,6 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <div id="loading" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-family: Arial, sans-serif;">
-    <h2>Loading NoteAI...</h2>
-    <p>Please wait while the application loads.</p>
-  </div>
   <script src="flutter_bootstrap.js" async></script>
-  <script>
-    // Hide loading screen when Flutter loads
-    window.addEventListener('flutter-first-frame', function () {
-      document.getElementById('loading').style.display = 'none';
-    });
-  </script>
 </body>
 </html>
