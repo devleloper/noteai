@@ -10,6 +10,7 @@ import '../../search/view/search_screen.dart';
 import '../../settings/view/settings_screen.dart';
 import '../widgets/recording_card.dart';
 import '../widgets/date_header_widget.dart';
+import '../../../widgets/sync/sync_status_indicator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('NoteAI'),
         actions: [
+          const SyncStatusIndicator(showDetails: false),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

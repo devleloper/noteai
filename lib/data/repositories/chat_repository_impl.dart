@@ -12,22 +12,38 @@ import '../models/realm_models.dart';
 import '../datasources/remote/ai_chat_service.dart';
 import '../datasources/remote/firebase_datasource.dart';
 import '../datasources/local/realm_datasource.dart';
+import '../../core/services/sync/cross_device_sync_service.dart';
+import '../../core/services/sync/firestore_sync_manager.dart';
+import '../../core/services/sync/smart_cache.dart';
+import '../../core/services/sync/offline_queue.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   final RealmDataSource _realmDataSource;
   final AIChatService _aiService;
   final FirebaseDataSource _firebaseDataSource;
   final uuid_package.Uuid _uuid;
+  final CrossDeviceSyncService _syncService;
+  final FirestoreSyncManager _firestoreSyncManager;
+  final SmartCache _smartCache;
+  final OfflineQueue _offlineQueue;
 
   ChatRepositoryImpl({
     required RealmDataSource realmDataSource,
     required AIChatService aiService,
     required FirebaseDataSource firebaseDataSource,
     required uuid_package.Uuid uuid,
+    required CrossDeviceSyncService syncService,
+    required FirestoreSyncManager firestoreSyncManager,
+    required SmartCache smartCache,
+    required OfflineQueue offlineQueue,
   }) : _realmDataSource = realmDataSource,
        _aiService = aiService,
        _firebaseDataSource = firebaseDataSource,
-       _uuid = uuid;
+       _uuid = uuid,
+       _syncService = syncService,
+       _firestoreSyncManager = firestoreSyncManager,
+       _smartCache = smartCache,
+       _offlineQueue = offlineQueue;
 
   Realm get _realm {
     try {

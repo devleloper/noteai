@@ -15,6 +15,7 @@ import '../bloc/chat_state.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/typing_indicator.dart';
+import '../../../widgets/sync/sync_status_indicator.dart';
 
 class ChatScreen extends StatefulWidget {
   final String recordingId;
@@ -103,6 +104,10 @@ class _ChatScreenState extends State<ChatScreen> {
               return const Text('Chat with AI');
             },
           ),
+          actions: [
+            const SyncStatusIndicator(showDetails: false),
+            const SizedBox(width: 8),
+          ],
         ),
         body: BlocConsumer<ChatBloc, ChatState>(
           listener: (context, state) {

@@ -18,6 +18,7 @@ import '../../../../core/errors/exceptions.dart';
 import '../../../../domain/usecases/usecase.dart';
 import '../../../../data/datasources/local/audio_recording_service.dart';
 import '../../../../core/services/wake_lock_service.dart';
+import '../../../../core/services/sync/cross_device_sync_service.dart';
 import '../../../../core/utils/service_locator.dart' as di;
 import 'recording_event.dart';
 import 'recording_state.dart';
@@ -184,6 +185,14 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
   ) async {
     emit(RecordingLoading());
     
+    // Trigger sync before loading recordings
+    try {
+      final syncService = di.sl<CrossDeviceSyncService>();
+      await syncService.forceSync();
+    } catch (e) {
+      print('RecordingBloc: Error during sync: $e');
+    }
+    
     final result = await _getRecordings(NoParams());
     if (result.isLeft()) {
       final failure = result.fold((l) => l, (r) => throw Exception('Unexpected right value'));
@@ -204,9 +213,20 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     final result = await _deleteRecording(DeleteRecordingParams(recordingId: event.recordingId));
     if (result.isLeft()) {
       final failure = result.fold((l) => l, (r) => throw Exception('Unexpected right value'));
-      emit(RecordingError(failure.message ?? 'Unknown error'));
+      emit(RecordingError(failure.message));
       return;
     }
+    
+    // Get updated recordings list
+    final recordingsResult = await _getRecordings(NoParams());
+    if (recordingsResult.isLeft()) {
+      final failure = recordingsResult.fold((l) => l, (r) => throw Exception('Unexpected right value'));
+      emit(RecordingError(failure.message));
+      return;
+    }
+    
+    final recordings = recordingsResult.fold((l) => throw Exception('Unexpected left value'), (r) => r);
+    emit(RecordingsLoaded(recordings));
     
     // Reload recordings after successful deletion
     add(LoadRecordingsRequested());

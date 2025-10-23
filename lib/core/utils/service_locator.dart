@@ -13,6 +13,12 @@ import '../../data/datasources/local/audio_recording_service.dart';
 import '../../data/datasources/local/background_recording_service.dart';
 import '../../data/datasources/local/offline_task_queue.dart';
 import '../services/wake_lock_service.dart';
+import '../services/sync/cross_device_sync_service.dart';
+import '../services/sync/firestore_sync_manager.dart';
+import '../services/sync/smart_cache.dart';
+import '../services/sync/offline_queue.dart';
+import '../services/sync/audio_metadata_service.dart';
+import '../services/sync/remote_audio_service.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
 import '../../data/datasources/remote/transcription_service.dart';
@@ -68,6 +74,12 @@ Future<void> init() async {
   sl.registerLazySingleton<BackgroundRecordingService>(() => BackgroundRecordingService());
   sl.registerLazySingleton<OfflineTaskQueue>(() => OfflineTaskQueue());
   sl.registerLazySingleton<WakeLockService>(() => WakeLockService());
+  sl.registerLazySingleton<CrossDeviceSyncService>(() => CrossDeviceSyncService());
+  sl.registerLazySingleton<FirestoreSyncManager>(() => FirestoreSyncManager());
+  sl.registerLazySingleton<SmartCache>(() => SmartCache());
+  sl.registerLazySingleton<OfflineQueue>(() => OfflineQueue());
+  sl.registerLazySingleton<AudioMetadataService>(() => AudioMetadataService());
+  sl.registerLazySingleton<RemoteAudioService>(() => RemoteAudioService());
   sl.registerLazySingleton<FirebaseDataSource>(
     () => FirebaseDataSourceImpl(sl(), sl()),
   );
@@ -82,6 +94,10 @@ Future<void> init() async {
       remoteDataSource: sl(),
       networkInfo: sl(),
       audioService: sl(),
+      syncService: sl(),
+      firestoreSyncManager: sl(),
+      smartCache: sl(),
+      offlineQueue: sl(),
     ),
   );
   sl.registerLazySingleton<AuthRepository>(
@@ -125,6 +141,10 @@ Future<void> init() async {
       aiService: sl(),
       firebaseDataSource: sl(),
       uuid: const uuid_package.Uuid(),
+      syncService: sl(),
+      firestoreSyncManager: sl(),
+      smartCache: sl(),
+      offlineQueue: sl(),
     ),
   );
   

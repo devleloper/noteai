@@ -15,6 +15,8 @@ class Recording extends Equatable {
   final TranscriptionStatus transcriptionStatus;
   final DateTime? transcriptionCompletedAt;
   final String? transcriptionError;
+  final bool isRemote;
+  final String? deviceId;
   
   const Recording({
     required this.id,
@@ -31,6 +33,8 @@ class Recording extends Equatable {
     required this.transcriptionStatus,
     this.transcriptionCompletedAt,
     this.transcriptionError,
+    this.isRemote = false,
+    this.deviceId,
   });
   
   @override
@@ -49,6 +53,8 @@ class Recording extends Equatable {
     transcriptionStatus,
     transcriptionCompletedAt,
     transcriptionError,
+    isRemote,
+    deviceId,
   ];
   
   Recording copyWith({
@@ -66,6 +72,8 @@ class Recording extends Equatable {
     TranscriptionStatus? transcriptionStatus,
     DateTime? transcriptionCompletedAt,
     String? transcriptionError,
+    bool? isRemote,
+    String? deviceId,
   }) {
     return Recording(
       id: id ?? this.id,
@@ -82,6 +90,8 @@ class Recording extends Equatable {
       transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
       transcriptionCompletedAt: transcriptionCompletedAt ?? this.transcriptionCompletedAt,
       transcriptionError: transcriptionError ?? this.transcriptionError,
+      isRemote: isRemote ?? this.isRemote,
+      deviceId: deviceId ?? this.deviceId,
     );
   }
 }

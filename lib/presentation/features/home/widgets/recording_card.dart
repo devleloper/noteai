@@ -9,6 +9,7 @@ import '../../recording/bloc/recording_event.dart';
 import '../../transcription/view/transcription_screen.dart';
 import '../../chat/view/chat_screen.dart';
 import 'rename_dialog.dart';
+import '../../../widgets/sync/remote_recording_indicator.dart';
 
 class RecordingCard extends StatefulWidget {
   final Recording recording;
@@ -105,6 +106,15 @@ class _RecordingCardState extends State<RecordingCard>
                   ),
                 ],
               ),
+              
+              // Remote recording indicator
+              if (widget.recording.isRemote) ...[
+                const SizedBox(height: 8),
+                CompactRemoteRecordingIndicator(
+                  deviceId: widget.recording.deviceId ?? 'Unknown Device',
+                  deviceName: _getDeviceName(widget.recording.deviceId),
+                ),
+              ],
               
               const SizedBox(height: 8),
               
@@ -450,5 +460,18 @@ class _RecordingCardState extends State<RecordingCard>
         },
       ),
     );
+  }
+
+  String _getDeviceName(String? deviceId) {
+    if (deviceId == null) return 'Unknown Device';
+    
+    // Simple device name mapping - in a real app, this would come from device registry
+    if (deviceId.contains('iPhone')) return 'iPhone';
+    if (deviceId.contains('iPad')) return 'iPad';
+    if (deviceId.contains('Android')) return 'Android';
+    if (deviceId.contains('Mac')) return 'Mac';
+    if (deviceId.contains('Windows')) return 'Windows';
+    
+    return 'Device ${deviceId.substring(0, 8)}...';
   }
 }

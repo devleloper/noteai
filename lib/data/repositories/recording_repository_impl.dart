@@ -8,18 +8,30 @@ import '../datasources/local/realm_datasource.dart';
 import '../datasources/local/audio_recording_service.dart';
 import '../datasources/remote/firebase_datasource.dart';
 import '../models/recording_model.dart';
+import '../../core/services/sync/cross_device_sync_service.dart';
+import '../../core/services/sync/firestore_sync_manager.dart';
+import '../../core/services/sync/smart_cache.dart';
+import '../../core/services/sync/offline_queue.dart';
 
 class RecordingRepositoryImpl implements RecordingRepository {
   final RealmDataSource localDataSource;
   final FirebaseDataSource remoteDataSource;
   final NetworkInfo networkInfo;
   final AudioRecordingService audioService;
+  final CrossDeviceSyncService syncService;
+  final FirestoreSyncManager firestoreSyncManager;
+  final SmartCache smartCache;
+  final OfflineQueue offlineQueue;
   
   RecordingRepositoryImpl({
     required this.localDataSource,
     required this.remoteDataSource,
     required this.networkInfo,
     required this.audioService,
+    required this.syncService,
+    required this.firestoreSyncManager,
+    required this.smartCache,
+    required this.offlineQueue,
   });
   
   @override
@@ -166,10 +178,70 @@ class RecordingRepositoryImpl implements RecordingRepository {
   @override
   Future<Either<Failure, List<Recording>>> getRecordings() async {
     try {
-      final recordings = await localDataSource.getRecordings();
+      print('RecordingRepository: Loading recordings...');
+      
+      // Get local recordings
+      final localRecordings = await localDataSource.getRecordings();
+      print('RecordingRepository: Found ${localRecordings.length} local recordings');
+      
+      // Get synced recordings from cache first
+      final cachedRecordings = await smartCache.getAllCachedTranscripts();
+      print('RecordingRepository: Found ${cachedRecordings.length} cached recordings');
+      
+      // Get remote recordings if online
+      List<Map<String, dynamic>> remoteRecordings = [];
+      if (await networkInfo.isConnected) {
+        try {
+          print('RecordingRepository: Fetching remote recordings...');
+          remoteRecordings = await firestoreSyncManager.getTranscripts();
+          print('RecordingRepository: Found ${remoteRecordings.length} remote recordings');
+        } catch (e) {
+          print('RecordingRepository: Error fetching remote recordings: $e');
+        }
+      } else {
+        print('RecordingRepository: Offline - skipping remote fetch');
+      }
+      
+      // Merge local and remote recordings
+      final allRecordings = <Recording>[];
+      
+      // Add local recordings
+      for (final model in localRecordings) {
+        allRecordings.add(model.toEntity());
+      }
+      
+      // Add remote recordings (metadata only, audio files remain local)
+      for (final remoteData in remoteRecordings) {
+        final recordingId = remoteData['recordingId'] as String?;
+        if (recordingId != null && !allRecordings.any((r) => r.id == recordingId)) {
+          // Create remote recording entity (audio file not available locally)
+          final remoteRecording = Recording(
+            id: recordingId,
+            title: remoteData['title'] as String? ?? 'Remote Recording',
+            audioPath: '', // No local file path
+            duration: Duration(milliseconds: remoteData['duration'] as int? ?? 0),
+            createdAt: DateTime.tryParse(remoteData['createdAt'] as String? ?? '') ?? DateTime.now(),
+            updatedAt: DateTime.tryParse(remoteData['updatedAt'] as String? ?? '') ?? DateTime.now(),
+            status: RecordingStatus.completed,
+            progress: 1.0,
+            isSynced: true,
+            transcriptionStatus: remoteData['transcriptionStatus'] == 'completed' 
+                ? TranscriptionStatus.completed 
+                : TranscriptionStatus.pending,
+            transcript: remoteData['transcript'] as String?,
+            summary: remoteData['summary'] as String?,
+            isRemote: true, // Mark as remote recording
+            deviceId: remoteData['deviceId'] as String?,
+          );
+          allRecordings.add(remoteRecording);
+          print('RecordingRepository: Added remote recording $recordingId');
+        }
+      }
+      
       // Sort by creation date, most recent first
-      recordings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return Right(recordings.map((model) => model.toEntity()).toList());
+      allRecordings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      return Right(allRecordings);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

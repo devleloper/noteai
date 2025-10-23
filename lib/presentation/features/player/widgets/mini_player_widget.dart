@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../../../domain/entities/recording.dart';
+import '../../../../core/services/sync/remote_audio_service.dart';
+import '../../../widgets/sync/remote_recording_indicator.dart';
 
 class MiniPlayerWidget extends StatefulWidget {
   final Recording recording;
@@ -19,6 +21,7 @@ class MiniPlayerWidget extends StatefulWidget {
 
 class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
   late AudioPlayer _audioPlayer;
+  late RemoteAudioService _remoteAudioService;
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
@@ -28,11 +31,13 @@ class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
   bool _isPlaying = false;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isDownloading = false;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _remoteAudioService = RemoteAudioService();
     _initializePlayer();
   }
 
@@ -43,8 +48,24 @@ class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
         _errorMessage = null;
       });
 
-      // Set the audio source
-      await _audioPlayer.setFilePath(widget.recording.audioPath);
+      // Check if this is a remote recording
+      if (widget.recording.isRemote) {
+        // For remote recordings, check if audio is available locally
+        final localPath = await _remoteAudioService.getLocalAudioPath(widget.recording.id);
+        if (localPath != null) {
+          await _audioPlayer.setFilePath(localPath);
+        } else {
+          // Show download option for remote audio
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Audio not available locally';
+          });
+          return;
+        }
+      } else {
+        // For local recordings, use the audio path directly
+        await _audioPlayer.setFilePath(widget.recording.audioPath);
+      }
       
       // Listen to position changes
       _positionSubscription = _audioPlayer.positionStream.listen((position) {
@@ -195,6 +216,17 @@ class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          
+          // Remote recording indicator
+          if (widget.recording.isRemote) ...[
+            const SizedBox(height: 8),
+            RemoteRecordingIndicator(
+              deviceId: widget.recording.deviceId ?? 'Unknown Device',
+              deviceName: _getDeviceName(widget.recording.deviceId),
+              showDetails: true,
+            ),
+          ],
+          
           const SizedBox(height: 16),
           
           // Error message
@@ -223,6 +255,16 @@ class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Download section for remote audio
+          if (widget.recording.isRemote && _errorMessage == 'Audio not available locally') ...[
+            AudioDownloadStatus(
+              isDownloading: _isDownloading,
+              isDownloaded: false,
+              onDownload: _downloadRemoteAudio,
             ),
             const SizedBox(height: 16),
           ],
@@ -331,5 +373,44 @@ class _MiniPlayerWidgetState extends State<MiniPlayerWidget> {
         ),
       ),
     );
+  }
+
+  String _getDeviceName(String? deviceId) {
+    if (deviceId == null) return 'Unknown Device';
+    
+    // Simple device name mapping - in a real app, this would come from device registry
+    if (deviceId.contains('iPhone')) return 'iPhone';
+    if (deviceId.contains('iPad')) return 'iPad';
+    if (deviceId.contains('Android')) return 'Android';
+    if (deviceId.contains('Mac')) return 'Mac';
+    if (deviceId.contains('Windows')) return 'Windows';
+    
+    return 'Device ${deviceId.substring(0, 8)}...';
+  }
+
+  Future<void> _downloadRemoteAudio() async {
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      final downloadedPath = await _remoteAudioService.downloadRemoteAudio(widget.recording.id);
+      if (downloadedPath != null) {
+        // Reinitialize player with downloaded audio
+        await _initializePlayer();
+      } else {
+        setState(() {
+          _errorMessage = 'Download failed - audio not available';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Download error: $e';
+      });
+    } finally {
+      setState(() {
+        _isDownloading = false;
+      });
+    }
   }
 }

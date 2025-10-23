@@ -6,6 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
 import 'core/utils/service_locator.dart' as di;
+import 'core/services/sync/cross_device_sync_service.dart';
+import 'core/services/sync/firestore_sync_manager.dart';
 import 'presentation/features/home/view/home_screen.dart';
 import 'presentation/features/auth/view/login_screen.dart';
 import 'presentation/features/auth/bloc/auth_bloc.dart';
@@ -34,6 +36,10 @@ void main() async {
   await GoogleSignIn.instance.initialize(
     // serverClientId will be read from google-services.json automatically
   );
+  
+  // Initialize CrossDeviceSyncService
+  final syncService = di.sl<CrossDeviceSyncService>();
+  await syncService.initialize();
   
   runApp(const NoteAIApp());
 }
@@ -93,6 +99,17 @@ class AuthWrapper extends StatelessWidget {
             ),
           );
         } else if (state is AuthAuthenticated) {
+          // Start sync services after authentication
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            try {
+              final syncService = di.sl<CrossDeviceSyncService>();
+              syncService.startSync();
+              final firestoreSyncManager = di.sl<FirestoreSyncManager>();
+              firestoreSyncManager.startListening();
+            } catch (e) {
+              print('Error starting sync services: $e');
+            }
+          });
           return const HomeScreen();
         } else if (state is AuthError) {
           return Scaffold(
