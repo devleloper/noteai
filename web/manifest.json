@@ -1,11 +1,11 @@
 {
-    "name": "noteai",
-    "short_name": "noteai",
+    "name": "NoteAI - AI Voice Recording & Transcription",
+    "short_name": "NoteAI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "AI-powered voice recording and transcription app with cross-device synchronization",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
