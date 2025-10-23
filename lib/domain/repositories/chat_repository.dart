@@ -13,6 +13,11 @@ abstract class ChatRepository {
 
   // Message management
   Future<Either<Failure, List<ChatMessage>>> getMessages(String sessionId);
+  Future<Either<Failure, List<ChatMessage>>> getMessagesLazy({
+    required String sessionId,
+    int limit = 20,
+    int offset = 0,
+  });
   Future<Either<Failure, ChatMessage>> sendMessage(SendMessageParams params);
   Future<Either<Failure, ChatMessage>> regenerateMessage(RegenerateMessageParams params);
   Future<Either<Failure, void>> deleteMessage(String messageId);

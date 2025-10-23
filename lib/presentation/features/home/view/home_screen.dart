@@ -30,10 +30,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NoteAI'),
+        title: Row(
+          children: [
+            const SyncStatusIndicator(showDetails: false),
+            const SizedBox(width: 12),
+            const Text('NoteAI'),
+          ],
+        ),
         actions: [
-          const SyncStatusIndicator(showDetails: false),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

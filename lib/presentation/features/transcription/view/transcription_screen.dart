@@ -5,7 +5,6 @@ import '../../../../domain/entities/recording.dart';
 import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_state.dart';
 import '../../recording/bloc/recording_event.dart';
-import '../../../widgets/sync/sync_status_indicator.dart';
 
 class TranscriptionScreen extends StatelessWidget {
   final Recording recording;
@@ -21,7 +20,6 @@ class TranscriptionScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(recording.title),
         actions: [
-          const SyncStatusIndicator(showDetails: false),
           const SizedBox(width: 8),
         ],
       ),

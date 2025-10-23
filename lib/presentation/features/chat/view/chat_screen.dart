@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -7,15 +8,17 @@ import '../../../../domain/repositories/chat_repository.dart';
 import '../../../../domain/usecases/chat/create_session.dart';
 import '../../../../domain/usecases/chat/send_message.dart' as send_message_use_case;
 import '../../../../domain/usecases/chat/get_chat_history.dart';
+import '../../../../domain/usecases/chat/get_chat_messages_lazy.dart';
+import '../../../../domain/usecases/chat/validate_chat_consistency.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart' as generate_summary_use_case;
 import '../../../../domain/entities/chat_message.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
+import '../widgets/chat_message_shimmer.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/typing_indicator.dart';
-import '../../../widgets/sync/sync_status_indicator.dart';
 
 class ChatScreen extends StatefulWidget {
   final String recordingId;
@@ -42,11 +45,19 @@ class _ChatScreenState extends State<ChatScreen> {
       createSession: sl<CreateSession>(),
       sendMessage: sl<send_message_use_case.SendMessage>(),
       getChatHistory: sl<GetChatHistory>(),
+      getChatMessagesLazy: sl<GetChatMessagesLazy>(),
+      validateChatConsistency: sl<ValidateChatConsistency>(),
       generateSummary: sl<generate_summary_use_case.GenerateSummary>(),
       chatRepository: sl<ChatRepository>(),
       uuid: const uuid_package.Uuid(),
     );
     _chatBloc.add(LoadChatSession(widget.recordingId));
+    
+    // Add scroll listener for pagination
+    _scrollController.addListener(_onScroll);
+    
+    // Validate consistency periodically
+    _validateConsistencyPeriodically();
     
     // Auto-scroll to bottom when the widget is first built
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,6 +98,27 @@ class _ChatScreenState extends State<ChatScreen> {
     _chatBloc.add(ChangeModel(model));
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels <= 100) {
+      // User scrolled to top, load more messages
+      final state = _chatBloc.state;
+      if (state is ChatLoaded && state.hasMoreMessages && !state.isLoadingMore) {
+        _chatBloc.add(const LoadMoreMessages());
+      }
+    }
+  }
+
+  void _validateConsistencyPeriodically() {
+    // Validate consistency every 30 seconds
+    Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _chatBloc.add(const ValidateConsistency());
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ChatBloc>(
@@ -105,7 +137,6 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
           actions: [
-            const SyncStatusIndicator(showDetails: false),
             const SizedBox(width: 8),
           ],
         ),
@@ -156,9 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
         },
         builder: (context, state) {
           if (state is ChatLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const ChatSessionShimmer();
           }
 
           if (state is ChatError) {
@@ -222,14 +251,24 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(8),
-                    itemCount: allMessages.length + (state.isTyping ? 1 : 0),
+                    itemCount: allMessages.length + 
+                        (state.isTyping ? 1 : 0) + 
+                        (state.isLoadingMore ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // Show loading more shimmer at the beginning
+                      if (state.isLoadingMore && index == 0) {
+                        return const ChatLoadMoreShimmer();
+                      }
+                      
+                      // Adjust index for loading shimmer
+                      final messageIndex = state.isLoadingMore ? index - 1 : index;
+                      
                       // Show typing indicator at the end if typing
-                      if (state.isTyping && index == allMessages.length) {
+                      if (state.isTyping && messageIndex == allMessages.length) {
                         return const TypingIndicator();
                       }
                       
-                      final message = allMessages[index];
+                      final message = allMessages[messageIndex];
                       final isSummary = message.metadata?['isSummary'] == true;
                       
                       return MessageBubble(

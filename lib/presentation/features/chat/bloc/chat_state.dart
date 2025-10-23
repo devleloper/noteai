@@ -24,6 +24,10 @@ class ChatLoaded extends ChatState {
   final bool isGenerating;
   final bool isGeneratingSummary;
   final bool isTyping;
+  final bool isLoadingMore;
+  final bool hasMoreMessages;
+  final int totalMessages;
+  final bool isConsistencyValid;
 
   const ChatLoaded({
     required this.session,
@@ -32,6 +36,10 @@ class ChatLoaded extends ChatState {
     this.isGenerating = false,
     this.isGeneratingSummary = false,
     this.isTyping = false,
+    this.isLoadingMore = false,
+    this.hasMoreMessages = true,
+    this.totalMessages = 0,
+    this.isConsistencyValid = true,
   });
 
   @override
@@ -42,6 +50,10 @@ class ChatLoaded extends ChatState {
         isGenerating,
         isGeneratingSummary,
         isTyping,
+        isLoadingMore,
+        hasMoreMessages,
+        totalMessages,
+        isConsistencyValid,
       ];
 
   ChatLoaded copyWith({
@@ -51,6 +63,10 @@ class ChatLoaded extends ChatState {
     bool? isGenerating,
     bool? isGeneratingSummary,
     bool? isTyping,
+    bool? isLoadingMore,
+    bool? hasMoreMessages,
+    int? totalMessages,
+    bool? isConsistencyValid,
   }) {
     return ChatLoaded(
       session: session ?? this.session,
@@ -59,6 +75,10 @@ class ChatLoaded extends ChatState {
       isGenerating: isGenerating ?? this.isGenerating,
       isGeneratingSummary: isGeneratingSummary ?? this.isGeneratingSummary,
       isTyping: isTyping ?? this.isTyping,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
+      totalMessages: totalMessages ?? this.totalMessages,
+      isConsistencyValid: isConsistencyValid ?? this.isConsistencyValid,
     );
   }
 }

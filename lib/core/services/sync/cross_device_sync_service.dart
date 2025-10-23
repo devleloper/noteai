@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../data/models/sync/sync_models.dart';
+import 'chat_consistency_service.dart';
 
 /// Central service for managing cross-device synchronization
 class CrossDeviceSyncService {
@@ -14,6 +15,7 @@ class CrossDeviceSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Connectivity _connectivity = Connectivity();
+  late ChatConsistencyService _chatConsistencyService;
   
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   StreamSubscription<DocumentSnapshot>? _syncStatusSubscription;
@@ -31,6 +33,10 @@ class CrossDeviceSyncService {
   /// Initialize the sync service
   Future<void> initialize() async {
     try {
+      // Initialize chat consistency service
+      _chatConsistencyService = ChatConsistencyService();
+      await _chatConsistencyService.initialize();
+
       // Get current user
       _currentUserId = _auth.currentUser?.uid;
       if (_currentUserId == null) {
@@ -276,7 +282,12 @@ class CrossDeviceSyncService {
   Future<void> _syncChats() async {
     // Implementation for syncing chat conversations
     print('CrossDeviceSyncService: Syncing chats...');
-    // TODO: Implement chat synchronization
+    try {
+      await _chatConsistencyService.forceSyncAllChatSessions();
+      print('CrossDeviceSyncService: Chat sync completed');
+    } catch (e) {
+      print('CrossDeviceSyncService: Chat sync failed: $e');
+    }
   }
 
   Future<void> _syncAudioMetadata() async {

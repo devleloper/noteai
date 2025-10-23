@@ -16,6 +16,23 @@ class LoadChatSession extends ChatEvent {
   List<Object> get props => [recordingId];
 }
 
+class LoadMoreMessages extends ChatEvent {
+  const LoadMoreMessages();
+}
+
+class ValidateConsistency extends ChatEvent {
+  const ValidateConsistency();
+}
+
+class LoadInitialMessages extends ChatEvent {
+  final String sessionId;
+
+  const LoadInitialMessages(this.sessionId);
+
+  @override
+  List<Object> get props => [sessionId];
+}
+
 class SendMessage extends ChatEvent {
   final String content;
   final String? model;

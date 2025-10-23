@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../data/models/sync/sync_models.dart';
 import '../../../../core/services/sync/cross_device_sync_service.dart';
+import '../../../../core/utils/service_locator.dart' as di;
 
 /// Widget for displaying sync status indicator
 class SyncStatusIndicator extends StatefulWidget {
@@ -23,10 +24,12 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
   late Animation<double> _pulseAnimation;
+  late CrossDeviceSyncService _syncService;
 
   @override
   void initState() {
     super.initState();
+    _syncService = di.sl<CrossDeviceSyncService>();
     _setupAnimations();
   }
 
@@ -38,7 +41,7 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
 
     _rotationAnimation = Tween<double>(
       begin: 0,
-      end: 1,
+      end: -1, // Изменяем направление ротации на против часовой стрелки
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.linear,
@@ -96,27 +99,30 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+          color: colorScheme.primaryContainer.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.cloud_done,
-              size: 16,
+              size: 14,
               color: colorScheme.primary,
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Synced',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface,
+            if (widget.showDetails) ...[
+              const SizedBox(width: 4),
+              Text(
+                'Synced',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontSize: 11,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -129,10 +135,10 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -144,28 +150,32 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
                   angle: _rotationAnimation.value * 2 * 3.14159,
                   child: Icon(
                     Icons.sync,
-                    size: 16,
+                    size: 14,
                     color: colorScheme.primary,
                   ),
                 );
               },
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Syncing...',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onPrimaryContainer,
-              ),
-            ),
-            if (widget.showDetails && syncStatus.pendingOperations > 0) ...[
+            if (widget.showDetails) ...[
               const SizedBox(width: 4),
               Text(
-                '(${syncStatus.pendingOperations})',
+                'Syncing...',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                  fontSize: 11,
                 ),
               ),
+              if (syncStatus.pendingOperations > 0) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '(${syncStatus.pendingOperations})',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ],
           ],
         ),
@@ -177,36 +187,39 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.error_outline,
-              size: 16,
+              size: 14,
               color: colorScheme.onErrorContainer,
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Sync Error',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-            if (widget.showDetails && error != null) ...[
+            if (widget.showDetails) ...[
               const SizedBox(width: 4),
-              Tooltip(
-                message: error,
-                child: Icon(
-                  Icons.info_outline,
-                  size: 14,
+              Text(
+                'Sync Error',
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onErrorContainer,
+                  fontSize: 11,
                 ),
               ),
+              if (error != null) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: error,
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 12,
+                    color: colorScheme.onErrorContainer,
+                  ),
+                ),
+              ],
             ],
           ],
         ),
@@ -218,26 +231,29 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: colorScheme.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.cloud_off,
-              size: 16,
+              size: 14,
               color: colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Offline',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+            if (widget.showDetails) ...[
+              const SizedBox(width: 4),
+              Text(
+                'Offline',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -248,26 +264,29 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: colorScheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.warning_outlined,
-              size: 16,
+              size: 14,
               color: colorScheme.onTertiaryContainer,
             ),
-            const SizedBox(width: 4),
-            Text(
-              'Conflict',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onTertiaryContainer,
+            if (widget.showDetails) ...[
+              const SizedBox(width: 4),
+              Text(
+                'Conflict',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onTertiaryContainer,
+                  fontSize: 11,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -275,28 +294,35 @@ class _SyncStatusIndicatorState extends State<SyncStatusIndicator>
   }
 
   Stream<SyncStatus> _getSyncStatusStream() {
-    // TODO: Implement actual sync status stream
-    // For now, return a mock stream
+    // Get real sync status from service
     return Stream.periodic(
       const Duration(seconds: 1),
-      (_) => const SyncStatus(
-        id: 'sync',
-        state: SyncState.idle,
-        lastSync: null,
-        pendingOperations: 0,
-      ),
+      (_) => _syncService.syncStatus,
     );
   }
 }
 
 /// Compact sync status indicator for app bars
-class CompactSyncStatusIndicator extends StatelessWidget {
+class CompactSyncStatusIndicator extends StatefulWidget {
   final VoidCallback? onTap;
 
   const CompactSyncStatusIndicator({
     super.key,
     this.onTap,
   });
+
+  @override
+  State<CompactSyncStatusIndicator> createState() => _CompactSyncStatusIndicatorState();
+}
+
+class _CompactSyncStatusIndicatorState extends State<CompactSyncStatusIndicator> {
+  late CrossDeviceSyncService _syncService;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncService = di.sl<CrossDeviceSyncService>();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +335,7 @@ class CompactSyncStatusIndicator extends StatelessWidget {
         }
 
         return GestureDetector(
-          onTap: onTap,
+          onTap: widget.onTap,
           child: Container(
             width: 24,
             height: 24,
@@ -378,15 +404,10 @@ class CompactSyncStatusIndicator extends StatelessWidget {
   }
 
   Stream<SyncStatus> _getSyncStatusStream() {
-    // TODO: Implement actual sync status stream
+    // Get real sync status from service
     return Stream.periodic(
       const Duration(seconds: 1),
-      (_) => const SyncStatus(
-        id: 'sync',
-        state: SyncState.idle,
-        lastSync: null,
-        pendingOperations: 0,
-      ),
+      (_) => _syncService.syncStatus,
     );
   }
 }

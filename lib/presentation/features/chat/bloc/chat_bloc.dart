@@ -7,6 +7,8 @@ import '../../../../domain/repositories/chat_repository.dart';
 import '../../../../domain/usecases/chat/create_session.dart';
 import '../../../../domain/usecases/chat/send_message.dart' as send_message_use_case;
 import '../../../../domain/usecases/chat/get_chat_history.dart';
+import '../../../../domain/usecases/chat/get_chat_messages_lazy.dart';
+import '../../../../domain/usecases/chat/validate_chat_consistency.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart' as generate_summary_use_case;
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -15,6 +17,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final CreateSession _createSession;
   final send_message_use_case.SendMessage _sendMessage;
   final GetChatHistory _getChatHistory;
+  final GetChatMessagesLazy _getChatMessagesLazy;
+  final ValidateChatConsistency _validateChatConsistency;
   final generate_summary_use_case.GenerateSummary _generateSummary;
   final ChatRepository _chatRepository;
   final uuid_package.Uuid _uuid;
@@ -23,18 +27,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required CreateSession createSession,
     required send_message_use_case.SendMessage sendMessage,
     required GetChatHistory getChatHistory,
+    required GetChatMessagesLazy getChatMessagesLazy,
+    required ValidateChatConsistency validateChatConsistency,
     required generate_summary_use_case.GenerateSummary generateSummary,
     required ChatRepository chatRepository,
     required uuid_package.Uuid uuid,
   }) : _createSession = createSession,
        _sendMessage = sendMessage,
        _getChatHistory = getChatHistory,
+       _getChatMessagesLazy = getChatMessagesLazy,
+       _validateChatConsistency = validateChatConsistency,
        _generateSummary = generateSummary,
        _chatRepository = chatRepository,
        _uuid = uuid,
        super(const ChatInitial()) {
     
     on<LoadChatSession>(_onLoadChatSession);
+    on<LoadInitialMessages>(_onLoadInitialMessages);
+    on<LoadMoreMessages>(_onLoadMoreMessages);
+    on<ValidateConsistency>(_onValidateConsistency);
     on<SendMessage>(_onSendMessage);
     on<RegenerateResponse>(_onRegenerateResponse);
     on<ChangeModel>(_onChangeModel);
@@ -58,14 +69,26 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       
       if (sessionResult.isRight()) {
         final session = sessionResult.getOrElse(() => throw Exception('Failed to get session'));
-        final messagesResult = await _getChatHistory(session.id);
+        
+        // Load initial messages (first 20)
+        final messagesResult = await _getChatMessagesLazy(
+          sessionId: session.id,
+          limit: 20,
+          offset: 0,
+        );
         
         if (messagesResult.isRight()) {
           final messages = messagesResult.getOrElse(() => throw Exception('Failed to get messages'));
+          
+          // Get total message count for pagination
+          final totalMessages = await _getTotalMessageCount(session.id);
+          
           emit(ChatLoaded(
             session: session,
             messages: messages,
             selectedModel: session.defaultModel,
+            hasMoreMessages: messages.length < totalMessages,
+            totalMessages: totalMessages,
           ));
           return;
         }
@@ -79,10 +102,118 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           session: session,
           messages: session.messages,
           selectedModel: session.defaultModel,
+          hasMoreMessages: false,
+          totalMessages: session.messages.length,
         )),
       );
     } catch (e) {
       emit(ChatError('Failed to load chat session: $e'));
+    }
+  }
+
+  void _onLoadInitialMessages(
+    LoadInitialMessages event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+    emit(currentState.copyWith(isLoadingMore: true));
+
+    try {
+      final messagesResult = await _getChatMessagesLazy(
+        sessionId: event.sessionId,
+        limit: 20,
+        offset: 0,
+      );
+
+      if (messagesResult.isRight()) {
+        final messages = messagesResult.getOrElse(() => throw Exception('Failed to get messages'));
+        final totalMessages = await _getTotalMessageCount(event.sessionId);
+        
+        emit(currentState.copyWith(
+          messages: messages,
+          isLoadingMore: false,
+          hasMoreMessages: messages.length < totalMessages,
+          totalMessages: totalMessages,
+        ));
+      } else {
+        emit(currentState.copyWith(isLoadingMore: false));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  void _onLoadMoreMessages(
+    LoadMoreMessages event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+    if (!currentState.hasMoreMessages || currentState.isLoadingMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+
+    try {
+      final messagesResult = await _getChatMessagesLazy(
+        sessionId: currentState.session.id,
+        limit: 20,
+        offset: currentState.messages.length,
+      );
+
+      if (messagesResult.isRight()) {
+        final newMessages = messagesResult.getOrElse(() => throw Exception('Failed to get messages'));
+        final allMessages = [...currentState.messages, ...newMessages];
+        
+        emit(currentState.copyWith(
+          messages: allMessages,
+          isLoadingMore: false,
+          hasMoreMessages: allMessages.length < currentState.totalMessages,
+        ));
+      } else {
+        emit(currentState.copyWith(isLoadingMore: false));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  void _onValidateConsistency(
+    ValidateConsistency event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+
+    try {
+      final validationResult = await _validateChatConsistency(currentState.session.id);
+      if (validationResult.isRight()) {
+        final isValid = validationResult.getOrElse(() => throw Exception('Failed to validate'));
+        emit(currentState.copyWith(isConsistencyValid: isValid));
+        
+        if (!isValid) {
+          print('ChatBloc: Chat consistency validation failed - triggering sync');
+          // Trigger sync to fix consistency issues
+          _chatRepository.getMessages(currentState.session.id);
+        }
+      }
+    } catch (e) {
+      print('ChatBloc: Error validating consistency: $e');
+    }
+  }
+
+  Future<int> _getTotalMessageCount(String sessionId) async {
+    try {
+      final allMessagesResult = await _getChatHistory(sessionId);
+      if (allMessagesResult.isRight()) {
+        return allMessagesResult.getOrElse(() => throw Exception('Failed to get total count')).length;
+      }
+      return 0;
+    } catch (e) {
+      return 0;
     }
   }
 

@@ -16,6 +16,7 @@ import '../../core/services/sync/cross_device_sync_service.dart';
 import '../../core/services/sync/firestore_sync_manager.dart';
 import '../../core/services/sync/smart_cache.dart';
 import '../../core/services/sync/offline_queue.dart';
+import '../../core/services/sync/chat_consistency_service.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   final RealmDataSource _realmDataSource;
@@ -26,6 +27,7 @@ class ChatRepositoryImpl implements ChatRepository {
   final FirestoreSyncManager _firestoreSyncManager;
   final SmartCache _smartCache;
   final OfflineQueue _offlineQueue;
+  final ChatConsistencyService _chatConsistencyService;
 
   ChatRepositoryImpl({
     required RealmDataSource realmDataSource,
@@ -36,6 +38,7 @@ class ChatRepositoryImpl implements ChatRepository {
     required FirestoreSyncManager firestoreSyncManager,
     required SmartCache smartCache,
     required OfflineQueue offlineQueue,
+    required ChatConsistencyService chatConsistencyService,
   }) : _realmDataSource = realmDataSource,
        _aiService = aiService,
        _firebaseDataSource = firebaseDataSource,
@@ -43,7 +46,8 @@ class ChatRepositoryImpl implements ChatRepository {
        _syncService = syncService,
        _firestoreSyncManager = firestoreSyncManager,
        _smartCache = smartCache,
-       _offlineQueue = offlineQueue;
+       _offlineQueue = offlineQueue,
+       _chatConsistencyService = chatConsistencyService;
 
   Realm get _realm {
     try {
@@ -207,14 +211,63 @@ class ChatRepositoryImpl implements ChatRepository {
         return Left(NotFoundFailure('Chat session not found'));
       }
 
+      // Get messages from local storage
       final messages = _realm.query<ChatMessageRealm>(
         'sessionId == \$0',
         [sessionId],
       ).map((m) => ChatMessageModel.fromRealm(m).toEntity()).toList();
 
-      return Right(messages);
+      // Ensure consistent ordering and deduplication
+      final consistentMessages = await _chatConsistencyService.ensureConsistentMessageOrder(
+        sessionId,
+        messages,
+      );
+
+      // Sync with remote to ensure consistency
+      _chatConsistencyService.syncChatMessages(sessionId);
+
+      return Right(consistentMessages);
     } catch (e) {
       return Left(DatabaseFailure('Failed to get messages: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ChatMessage>>> getMessagesLazy({
+    required String sessionId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final sessionRealm = _realm.find<ChatSessionRealm>(sessionId);
+      if (sessionRealm == null) {
+        return Left(NotFoundFailure('Chat session not found'));
+      }
+
+      // Get total count first
+      final totalMessages = _realm.query<ChatMessageRealm>(
+        'sessionId == \$0',
+        [sessionId],
+      ).length;
+
+      // Load messages with pagination (most recent first)
+      final messages = _realm.query<ChatMessageRealm>(
+        'sessionId == \$0 SORT(timestamp DESC)',
+        [sessionId],
+      ).skip(offset).take(limit).map((m) => ChatMessageModel.fromRealm(m).toEntity()).toList();
+
+      // Ensure consistent ordering and deduplication
+      final consistentMessages = await _chatConsistencyService.ensureConsistentMessageOrder(
+        sessionId,
+        messages.reversed.toList(),
+      );
+
+      // Sync with remote to ensure consistency (background)
+      _chatConsistencyService.syncChatMessages(sessionId);
+
+      return Right(consistentMessages);
+    } catch (e) {
+      return Left(DatabaseFailure('Failed to get messages lazily: $e'));
     }
   }
 

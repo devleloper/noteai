@@ -19,6 +19,7 @@ import '../services/sync/smart_cache.dart';
 import '../services/sync/offline_queue.dart';
 import '../services/sync/audio_metadata_service.dart';
 import '../services/sync/remote_audio_service.dart';
+import '../services/sync/chat_consistency_service.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
 import '../../data/datasources/remote/transcription_service.dart';
@@ -47,6 +48,8 @@ import '../../domain/usecases/ai/transcribe_audio.dart';
 import '../../domain/usecases/chat/create_session.dart';
 import '../../domain/usecases/chat/send_message.dart';
 import '../../domain/usecases/chat/get_chat_history.dart';
+import '../../domain/usecases/chat/get_chat_messages_lazy.dart';
+import '../../domain/usecases/chat/validate_chat_consistency.dart';
 import '../../domain/usecases/chat/generate_summary.dart';
 
 final sl = GetIt.instance;
@@ -80,6 +83,7 @@ Future<void> init() async {
   sl.registerLazySingleton<OfflineQueue>(() => OfflineQueue());
   sl.registerLazySingleton<AudioMetadataService>(() => AudioMetadataService());
   sl.registerLazySingleton<RemoteAudioService>(() => RemoteAudioService());
+  sl.registerLazySingleton<ChatConsistencyService>(() => ChatConsistencyService());
   sl.registerLazySingleton<FirebaseDataSource>(
     () => FirebaseDataSourceImpl(sl(), sl()),
   );
@@ -145,6 +149,7 @@ Future<void> init() async {
       firestoreSyncManager: sl(),
       smartCache: sl(),
       offlineQueue: sl(),
+      chatConsistencyService: sl(),
     ),
   );
   
@@ -152,5 +157,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CreateSession(sl()));
   sl.registerLazySingleton(() => SendMessage(sl()));
   sl.registerLazySingleton(() => GetChatHistory(sl()));
+  sl.registerLazySingleton(() => GetChatMessagesLazy(sl()));
+  sl.registerLazySingleton(() => ValidateChatConsistency(sl()));
   sl.registerLazySingleton(() => GenerateSummary(sl()));
 }
