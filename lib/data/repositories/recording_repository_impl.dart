@@ -190,13 +190,18 @@ class RecordingRepositoryImpl implements RecordingRepository {
       
       // Get remote recordings if online
       List<Map<String, dynamic>> remoteRecordings = [];
+      List<Map<String, dynamic>> remoteChatSessions = [];
       if (await networkInfo.isConnected) {
         try {
           print('RecordingRepository: Fetching remote recordings...');
           remoteRecordings = await firestoreSyncManager.getTranscripts();
           print('RecordingRepository: Found ${remoteRecordings.length} remote recordings');
+          
+          print('RecordingRepository: Fetching remote chat sessions...');
+          remoteChatSessions = await firestoreSyncManager.getChats();
+          print('RecordingRepository: Found ${remoteChatSessions.length} remote chat sessions');
         } catch (e) {
-          print('RecordingRepository: Error fetching remote recordings: $e');
+          print('RecordingRepository: Error fetching remote data: $e');
         }
       } else {
         print('RecordingRepository: Offline - skipping remote fetch');
@@ -240,6 +245,41 @@ class RecordingRepositoryImpl implements RecordingRepository {
       
       // Sort by creation date, most recent first
       allRecordings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      // Sync remote chat sessions to local database
+      for (final chatData in remoteChatSessions) {
+        try {
+          print('RecordingRepository: Processing chat data: $chatData');
+          final chatId = chatData['chatId'] as String?;
+          final recordingId = chatData['recordingId'] as String?;
+          if (chatId != null && recordingId != null) {
+            // Check if chat session already exists locally
+            final existingSession = await localDataSource.getChatSessionByRecordingId(recordingId);
+            if (existingSession == null) {
+              // Create local chat session from remote data
+              await localDataSource.createChatSessionFromRemote(chatData);
+              print('RecordingRepository: Synced chat session $chatId for recording $recordingId');
+              
+              // Also sync chat messages if they exist
+              try {
+                final messages = await firestoreSyncManager.getChatMessages(recordingId);
+                if (messages.isNotEmpty) {
+                  await localDataSource.createChatMessagesFromRemote(recordingId, messages);
+                  print('RecordingRepository: Synced ${messages.length} messages for chat session $chatId');
+                }
+              } catch (e) {
+                print('RecordingRepository: Error syncing chat messages: $e');
+              }
+            } else {
+              print('RecordingRepository: Chat session already exists for recording $recordingId');
+            }
+          } else {
+            print('RecordingRepository: Missing chatId or recordingId in chat data');
+          }
+        } catch (e) {
+          print('RecordingRepository: Error syncing chat session: $e');
+        }
+      }
       
       return Right(allRecordings);
     } catch (e) {

@@ -70,7 +70,7 @@ class FirestoreSyncManager {
       final querySnapshot = await _firestore
           .collection('users')
           .doc(userId)
-          .collection('chats')
+          .collection('chat_sessions')
           .get();
       
       return querySnapshot.docs.map((doc) {
@@ -229,13 +229,14 @@ class FirestoreSyncManager {
     required DateTime timestamp,
     required String? model,
   }) async {
-    if (_currentUserId == null) return;
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
 
     try {
       await _firestore
           .collection('users')
-          .doc(_currentUserId)
-          .collection('chats')
+          .doc(userId)
+          .collection('chat_sessions')
           .doc(recordingId)
           .collection('messages')
           .doc(messageId)
@@ -259,13 +260,14 @@ class FirestoreSyncManager {
 
   /// Get chat messages for a recording
   Future<List<Map<String, dynamic>>> getChatMessages(String recordingId) async {
-    if (_currentUserId == null) return [];
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return [];
 
     try {
       final snapshot = await _firestore
           .collection('users')
-          .doc(_currentUserId)
-          .collection('chats')
+          .doc(userId)
+          .collection('chat_sessions')
           .doc(recordingId)
           .collection('messages')
           .orderBy('timestamp')
@@ -304,14 +306,15 @@ class FirestoreSyncManager {
 
   /// Delete chat messages for a recording
   Future<void> deleteChatMessages(String recordingId) async {
-    if (_currentUserId == null) return;
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
 
     try {
       final batch = _firestore.batch();
       final messagesSnapshot = await _firestore
           .collection('users')
-          .doc(_currentUserId)
-          .collection('chats')
+          .doc(userId)
+          .collection('chat_sessions')
           .doc(recordingId)
           .collection('messages')
           .get();
@@ -359,10 +362,10 @@ class FirestoreSyncManager {
     _chatsSubscription = _firestore
         .collection('users')
         .doc(userId)
-        .collection('chats')
+        .collection('chat_sessions')
         .snapshots()
         .listen((snapshot) {
-      print('FirestoreSyncManager: Chats updated - ${snapshot.docs.length} documents');
+      print('FirestoreSyncManager: Chat sessions updated - ${snapshot.docs.length} documents');
       // TODO: Handle chat updates
     });
   }
