@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -19,29 +20,50 @@ import 'domain/usecases/chat/create_session.dart';
 import 'domain/usecases/chat/generate_summary.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Load environment variables
-  await dotenv.load(fileName: '.env');
-  
-  // Initialize dependency injection
-  await di.init();
-  
-  // Initialize GoogleSignIn
-  await GoogleSignIn.instance.initialize(
-    // serverClientId will be read from google-services.json automatically
-  );
-  
-  // Initialize CrossDeviceSyncService
-  final syncService = di.sl<CrossDeviceSyncService>();
-  await syncService.initialize();
-  
-  runApp(const NoteAIApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    print('NoteAI: Starting app initialization...');
+    
+    // Initialize Firebase
+    print('NoteAI: Initializing Firebase...');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('NoteAI: Firebase initialized successfully');
+    
+    // Load environment variables
+    print('NoteAI: Loading environment variables...');
+    await dotenv.load(fileName: '.env');
+    print('NoteAI: Environment variables loaded');
+    
+    // Initialize dependency injection
+    print('NoteAI: Initializing dependency injection...');
+    await di.init();
+    print('NoteAI: Dependency injection initialized');
+    
+    // Initialize GoogleSignIn
+    print('NoteAI: Initializing GoogleSignIn...');
+    await GoogleSignIn.instance.initialize(
+      // serverClientId will be read from google-services.json automatically
+    );
+    print('NoteAI: GoogleSignIn initialized');
+    
+    // Initialize CrossDeviceSyncService
+    print('NoteAI: Initializing CrossDeviceSyncService...');
+    final syncService = di.sl<CrossDeviceSyncService>();
+    await syncService.initialize();
+    print('NoteAI: CrossDeviceSyncService initialized');
+    
+    print('NoteAI: All services initialized successfully');
+    runApp(const NoteAIApp());
+  } catch (e, stackTrace) {
+    print('NoteAI: Error during initialization: $e');
+    print('NoteAI: Stack trace: $stackTrace');
+    
+    // Run app anyway with error handling
+    runApp(ErrorApp(error: e.toString()));
+  }
 }
 
 class NoteAIApp extends StatelessWidget {
@@ -135,6 +157,71 @@ class AuthWrapper extends StatelessWidget {
           return const LoginScreen();
         }
       },
+    );
+  }
+}
+
+class ErrorApp extends StatelessWidget {
+  final String error;
+  
+  const ErrorApp({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'NoteAI - Error',
+      theme: AppTheme.lightTheme,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 24),
+                const Text(
+                  'Application Error',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'An error occurred during app initialization:',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    error,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    // Reload the page
+                    if (kIsWeb) {
+                      // For web, reload the page
+                      // ignore: avoid_web_libraries_in_flutter
+                      // html.window.location.reload();
+                    }
+                  },
+                  child: const Text('Reload App'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
