@@ -415,8 +415,8 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
         transcript: event.transcript,
       ));
       
-      // Create chat session and generate summary only for initial transcription
-      _createChatSessionAndSummary(event.recordingId, event.transcript);
+      // Create chat session only for initial transcription (summary will be generated on-demand)
+      _createChatSessionOnly(event.recordingId);
     }
     
     // Reload recordings to show updated transcription
@@ -582,46 +582,16 @@ class RecordingBloc extends Bloc<RecordingEvent, RecordingState> {
     return false;
   }
 
-  void _createChatSessionAndSummary(String recordingId, String transcript) async {
+  void _createChatSessionOnly(String recordingId) async {
     try {
-      // Create chat session
+      // Create chat session only - no summary generation
       final sessionResult = await _createSession(recordingId);
       sessionResult.fold(
         (failure) => print('Failed to create chat session: ${failure.message}'),
-        (session) {
-          print('Chat session created: ${session.id}');
-          
-          // Generate summary
-          _generateSummaryForSession(recordingId, transcript);
-        },
+        (session) => print('Chat session created: ${session.id} - Summary will be generated on-demand'),
       );
     } catch (e) {
       print('Error creating chat session: $e');
-    }
-  }
-
-  void _generateSummaryForSession(String recordingId, String transcript) async {
-    try {
-      // Get user preferences to get language
-      final userPrefsResult = await _getUserPreferences(NoParams());
-      final language = userPrefsResult.fold(
-        (failure) => 'en', // Default to English if failed
-        (preferences) => preferences.language,
-      );
-
-      final summaryResult = await _generateSummary(GenerateSummaryParams(
-        recordingId: recordingId,
-        transcript: transcript,
-        model: 'gpt-4o', // Default model for summaries
-        language: language,
-      ));
-      
-      summaryResult.fold(
-        (failure) => print('Failed to generate summary: ${failure.message}'),
-        (summary) => print('Summary generated successfully'),
-      );
-    } catch (e) {
-      print('Error generating summary: $e');
     }
   }
 

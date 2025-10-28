@@ -20,17 +20,21 @@ import '../services/sync/offline_queue.dart';
 import '../services/sync/audio_metadata_service.dart';
 import '../services/sync/remote_audio_service.dart';
 import '../services/sync/chat_consistency_service.dart';
+import '../services/summarization_service.dart';
+import '../services/summarization_manager.dart';
 import '../../data/datasources/remote/firebase_datasource.dart';
 import '../../data/datasources/remote/openai_datasource.dart';
 import '../../data/datasources/remote/transcription_service.dart';
 import '../../data/datasources/remote/ai_chat_service.dart';
 import '../../data/repositories/recording_repository_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/summarization_state_repository_impl.dart';
 import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/repositories/chat_repository_impl.dart';
 import '../../domain/repositories/recording_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/ai_repository.dart';
+import '../../domain/repositories/summarization_state_repository.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/usecases/recording/start_recording.dart';
 import '../../domain/usecases/recording/stop_recording.dart';
@@ -84,6 +88,23 @@ Future<void> init() async {
   sl.registerLazySingleton<AudioMetadataService>(() => AudioMetadataService());
   sl.registerLazySingleton<RemoteAudioService>(() => RemoteAudioService());
   sl.registerLazySingleton<ChatConsistencyService>(() => ChatConsistencyService());
+  sl.registerLazySingleton<SummarizationService>(
+    () => SummarizationService(
+      chatRepository: sl(),
+      aiService: sl(),
+      networkInfo: sl(),
+      offlineQueue: sl(),
+      stateRepository: sl(),
+    ),
+  );
+  sl.registerLazySingleton<SummarizationManager>(
+    () => SummarizationManager(
+      summarizationService: sl(),
+      offlineQueue: sl(),
+      networkInfo: sl(),
+      connectivity: sl(),
+    ),
+  );
   sl.registerLazySingleton<FirebaseDataSource>(
     () => FirebaseDataSourceImpl(sl(), sl()),
   );
@@ -115,6 +136,11 @@ Future<void> init() async {
     () => AIRepositoryImpl(
       openAIDataSource: sl(),
       localDataSource: sl(),
+    ),
+  );
+  sl.registerLazySingleton<SummarizationStateRepository>(
+    () => SummarizationStateRepositoryImpl(
+      realmDataSource: sl(),
     ),
   );
   

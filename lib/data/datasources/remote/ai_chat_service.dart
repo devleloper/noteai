@@ -33,27 +33,6 @@ class AIChatService {
       capabilities: ['text', 'reasoning', 'analysis', 'fast'],
       description: 'Most capable GPT-4 model with improved speed and efficiency',
     ),
-    'gpt-4-turbo': ModelConfig(
-      name: 'GPT-4 Turbo',
-      maxTokens: 8192,
-      costPerToken: 0.00001,
-      capabilities: ['text', 'fast', 'long-context'],
-      description: 'Fast and efficient GPT-4 model with extended context',
-    ),
-    'o1-mini': ModelConfig(
-      name: 'O1 Mini',
-      maxTokens: 2048,
-      costPerToken: 0.00015,
-      capabilities: ['reasoning', 'problem-solving', 'advanced'],
-      description: 'Advanced reasoning model for complex problem solving',
-    ),
-    'o1-preview': ModelConfig(
-      name: 'O1 Preview',
-      maxTokens: 4096,
-      costPerToken: 0.0006,
-      capabilities: ['advanced-reasoning', 'complex-analysis', 'research'],
-      description: 'Most advanced reasoning model for complex analysis',
-    ),
   };
 
   final Connectivity _connectivity;

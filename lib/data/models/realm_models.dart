@@ -2,6 +2,7 @@ import 'package:realm/realm.dart';
 import '../../domain/entities/recording.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/entities/chat_session.dart';
+import '../../domain/entities/summarization_state.dart';
 
 part 'realm_models.realm.dart';
 
@@ -106,4 +107,56 @@ class _ChatSessionRealm {
   late String defaultModel;
   late DateTime createdAt;
   late DateTime updatedAt;
+}
+
+// Summarization State Realm Model
+@RealmModel()
+class _SummarizationStateRealm {
+  @PrimaryKey()
+  late String recordingId;
+  late String status; // SummarizationStatus enum as string
+  late int retryAttempts;
+  String? error;
+  DateTime? lastAttempt;
+  String? generatedSummary;
+  late DateTime createdAt;
+  late DateTime updatedAt;
+}
+
+// Extension methods for SummarizationStateRealm
+extension SummarizationStateRealmExtension on SummarizationStateRealm {
+  SummarizationStatus get summarizationStatus => SummarizationStatus.values.firstWhere(
+    (e) => e.name == status,
+    orElse: () => SummarizationStatus.pending,
+  );
+  
+  set summarizationStatus(SummarizationStatus value) {
+    status = value.name;
+  }
+  
+  SummarizationState toEntity() {
+    return SummarizationState(
+      recordingId: recordingId,
+      status: summarizationStatus,
+      retryAttempts: retryAttempts,
+      error: error,
+      lastAttempt: lastAttempt,
+      generatedSummary: generatedSummary,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+  
+  static SummarizationStateRealm fromEntity(SummarizationState state) {
+    return SummarizationStateRealm(
+      state.recordingId,
+      state.status.name,
+      state.retryAttempts,
+      state.createdAt,
+      state.updatedAt,
+      error: state.error,
+      lastAttempt: state.lastAttempt,
+      generatedSummary: state.generatedSummary,
+    );
+  }
 }

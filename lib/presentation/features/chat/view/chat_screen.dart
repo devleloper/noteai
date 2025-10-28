@@ -11,10 +11,14 @@ import '../../../../domain/usecases/chat/get_chat_history.dart';
 import '../../../../domain/usecases/chat/get_chat_messages_lazy.dart';
 import '../../../../domain/usecases/chat/validate_chat_consistency.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart' as generate_summary_use_case;
+import '../../../../core/services/summarization_service.dart';
+import '../../../../domain/usecases/auth/get_user_preferences.dart';
+import '../../../../domain/usecases/recording/get_recordings.dart';
 import '../../../../domain/entities/chat_message.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
+import '../widgets/summarization_widget.dart';
 import '../widgets/chat_message_shimmer.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/model_selector.dart';
@@ -49,6 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
       validateChatConsistency: sl<ValidateChatConsistency>(),
       generateSummary: sl<generate_summary_use_case.GenerateSummary>(),
       chatRepository: sl<ChatRepository>(),
+      summarizationService: sl<SummarizationService>(),
+      getUserPreferences: sl<GetUserPreferences>(),
+      getRecordings: sl<GetRecordings>(),
       uuid: const uuid_package.Uuid(),
     );
     _chatBloc.add(LoadChatSession(widget.recordingId));
@@ -166,6 +173,29 @@ class _ChatScreenState extends State<ChatScreen> {
                 );
               }
             });
+          } else if (state is SummaryFailed) {
+            // Error is now handled by SummarizationErrorWidget
+            // Just scroll to show the error widget
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          } else if (state is SummaryGenerating) {
+            // Show summarization loading state
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
           } else if (state is ChatLoaded) {
             // Auto-scroll to bottom when new messages are received or typing starts
             final currentMessageCount = state.messages.length + (state.session.hasSummary ? 1 : 0);
@@ -243,6 +273,14 @@ class _ChatScreenState extends State<ChatScreen> {
             
             // Add regular messages
             allMessages.addAll(state.messages);
+            
+            // Check if we should show summarization widget
+            final showSummarizationWidget = !state.session.hasSummary && 
+                state.summarizationState != null && 
+                (state.summarizationState!.isGenerating || 
+                 state.summarizationState!.isPending || 
+                 state.summarizationState!.isFailed ||
+                 (state.summarizationState!.isCompleted && state.summarizationState!.generatedSummary != null));
 
             return Column(
               children: [
@@ -253,7 +291,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.all(8),
                     itemCount: allMessages.length + 
                         (state.isTyping ? 1 : 0) + 
-                        (state.isLoadingMore ? 1 : 0),
+                        (state.isLoadingMore ? 1 : 0) +
+                        (showSummarizationWidget ? 1 : 0),
                     itemBuilder: (context, index) {
                       // Show loading more shimmer at the beginning
                       if (state.isLoadingMore && index == 0) {
@@ -263,12 +302,58 @@ class _ChatScreenState extends State<ChatScreen> {
                       // Adjust index for loading shimmer
                       final messageIndex = state.isLoadingMore ? index - 1 : index;
                       
+                      // Show summarization widget if generating, failed, or completed
+                      if (showSummarizationWidget && messageIndex == 0) {
+                        return SummarizationWidget(
+                          summarizationState: state.summarizationState,
+                          onRetry: () {
+                            _chatBloc.add(CheckSummaryStatus(widget.recordingId));
+                          },
+                          onDismiss: () {
+                            // Dismiss summarization widget
+                            // This could trigger a state change to hide the widget
+                          },
+                          onViewFullSummary: () {
+                            // Scroll to the actual summary message
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_scrollController.hasClients) {
+                                _scrollController.animateTo(
+                                  _scrollController.position.maxScrollExtent,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                            });
+                          },
+                          onCopySummary: () {
+                            if (state.summarizationState?.generatedSummary != null) {
+                              Clipboard.setData(ClipboardData(
+                                text: state.summarizationState!.generatedSummary!,
+                              ));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Summary copied to clipboard'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          onCancel: () {
+                            // Cancel summarization if possible
+                            // This would require additional functionality in the service
+                          },
+                        );
+                      }
+                      
+                      // Adjust index for summarization widget
+                      final adjustedIndex = showSummarizationWidget ? messageIndex - 1 : messageIndex;
+                      
                       // Show typing indicator at the end if typing
-                      if (state.isTyping && messageIndex == allMessages.length) {
+                      if (state.isTyping && adjustedIndex == allMessages.length) {
                         return const TypingIndicator();
                       }
                       
-                      final message = allMessages[messageIndex];
+                      final message = allMessages[adjustedIndex];
                       final isSummary = message.metadata?['isSummary'] == true;
                       
                       return MessageBubble(

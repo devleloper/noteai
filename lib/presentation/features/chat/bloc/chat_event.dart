@@ -72,6 +72,32 @@ class GenerateSummary extends ChatEvent {
   List<Object> get props => [transcript, model, language];
 }
 
+class CheckSummaryStatus extends ChatEvent {
+  final String recordingId;
+
+  const CheckSummaryStatus(this.recordingId);
+
+  @override
+  List<Object> get props => [recordingId];
+}
+
+class GenerateSummaryOnDemand extends ChatEvent {
+  final String recordingId;
+  final String transcript;
+  final String model;
+  final String language;
+
+  const GenerateSummaryOnDemand({
+    required this.recordingId,
+    required this.transcript,
+    required this.model,
+    required this.language,
+  });
+
+  @override
+  List<Object> get props => [recordingId, transcript, model, language];
+}
+
 class CopyMessage extends ChatEvent {
   final String messageId;
 

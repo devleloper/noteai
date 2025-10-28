@@ -282,6 +282,7 @@ class TranscriptionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header row with proper overflow handling
             Row(
               children: [
                 Icon(
@@ -290,25 +291,79 @@ class TranscriptionScreen extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Transcription',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    'Transcription',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
-                if (showRegenerateButton) ...[
-                  TextButton.icon(
-                    onPressed: () => _regenerateTranscription(context, currentRecording),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Regenerate'),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                TextButton.icon(
-                  onPressed: () => _copyToClipboard(context, currentRecording),
-                  icon: const Icon(Icons.copy, size: 16),
-                  label: const Text('Copy'),
+                // Button row with proper constraints and responsive design
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // If screen is very narrow, stack buttons vertically
+                    if (constraints.maxWidth < 300) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (showRegenerateButton) ...[
+                            TextButton.icon(
+                              onPressed: () => _regenerateTranscription(context, currentRecording),
+                              icon: const Icon(Icons.refresh, size: 14),
+                              label: const Text('Regenerate', style: TextStyle(fontSize: 12)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ],
+                          TextButton.icon(
+                            onPressed: () => _copyToClipboard(context, currentRecording),
+                            icon: const Icon(Icons.copy, size: 14),
+                            label: const Text('Copy', style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    
+                    // Normal horizontal layout
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showRegenerateButton) ...[
+                          TextButton.icon(
+                            onPressed: () => _regenerateTranscription(context, currentRecording),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Regenerate'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        TextButton.icon(
+                          onPressed: () => _copyToClipboard(context, currentRecording),
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('Copy'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

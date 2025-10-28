@@ -9,6 +9,8 @@ import 'firebase_options.dart';
 import 'core/utils/service_locator.dart' as di;
 import 'core/services/sync/cross_device_sync_service.dart';
 import 'core/services/sync/firestore_sync_manager.dart';
+import 'core/services/summarization_manager.dart';
+import 'core/services/summarization_service.dart';
 import 'presentation/features/home/view/home_screen.dart';
 import 'presentation/features/auth/view/login_screen.dart';
 import 'presentation/features/auth/bloc/auth_bloc.dart';
@@ -54,6 +56,18 @@ void main() async {
     final syncService = di.sl<CrossDeviceSyncService>();
     await syncService.initialize();
     print('NoteAI: CrossDeviceSyncService initialized');
+    
+    // Initialize SummarizationManager
+    print('NoteAI: Initializing SummarizationManager...');
+    final summarizationManager = di.sl<SummarizationManager>();
+    await summarizationManager.initialize();
+    print('NoteAI: SummarizationManager initialized');
+    
+    // Resume interrupted summarizations
+    print('NoteAI: Resuming interrupted summarizations...');
+    final summarizationService = di.sl<SummarizationService>();
+    await summarizationService.resumeInterruptedSummarizations();
+    print('NoteAI: Interrupted summarizations resumed');
     
     print('NoteAI: All services initialized successfully');
     runApp(const NoteAIApp());

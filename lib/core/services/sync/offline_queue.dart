@@ -274,6 +274,9 @@ class OfflineQueue {
       case 'audio_metadata_sync':
         await _processAudioMetadataSync(operation);
         break;
+      case 'summarization':
+        await _processSummarization(operation);
+        break;
       case 'delete_transcript':
         await _processDeleteTranscript(operation);
         break;
@@ -303,6 +306,13 @@ class OfflineQueue {
   Future<void> _processAudioMetadataSync(SyncOperation operation) async {
     // TODO: Implement actual audio metadata sync
     print('OfflineQueue: Processing audio metadata sync for ${operation.entityId}');
+    await Future.delayed(const Duration(milliseconds: 100)); // Simulate processing
+  }
+
+  Future<void> _processSummarization(SyncOperation operation) async {
+    // TODO: Implement actual summarization processing
+    // This will be handled by SummarizationService.processPendingSummarizations()
+    print('OfflineQueue: Processing summarization for ${operation.entityId}');
     await Future.delayed(const Duration(milliseconds: 100)); // Simulate processing
   }
 

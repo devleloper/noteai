@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart' as uuid_package;
 import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/chat_session.dart';
 import '../../../../domain/entities/chat_message.dart';
+import '../../../../domain/entities/summarization_state.dart';
 import '../../../../domain/repositories/chat_repository.dart';
 import '../../../../domain/usecases/chat/create_session.dart';
 import '../../../../domain/usecases/chat/send_message.dart' as send_message_use_case;
@@ -10,6 +11,10 @@ import '../../../../domain/usecases/chat/get_chat_history.dart';
 import '../../../../domain/usecases/chat/get_chat_messages_lazy.dart';
 import '../../../../domain/usecases/chat/validate_chat_consistency.dart';
 import '../../../../domain/usecases/chat/generate_summary.dart' as generate_summary_use_case;
+import '../../../../core/services/summarization_service.dart';
+import '../../../../domain/usecases/auth/get_user_preferences.dart';
+import '../../../../domain/usecases/recording/get_recordings.dart';
+import '../../../../domain/usecases/usecase.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
@@ -21,6 +26,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ValidateChatConsistency _validateChatConsistency;
   final generate_summary_use_case.GenerateSummary _generateSummary;
   final ChatRepository _chatRepository;
+  final SummarizationService _summarizationService;
+  final GetUserPreferences _getUserPreferences;
+  final GetRecordings _getRecordings;
   final uuid_package.Uuid _uuid;
 
   ChatBloc({
@@ -31,6 +39,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required ValidateChatConsistency validateChatConsistency,
     required generate_summary_use_case.GenerateSummary generateSummary,
     required ChatRepository chatRepository,
+    required SummarizationService summarizationService,
+    required GetUserPreferences getUserPreferences,
+    required GetRecordings getRecordings,
     required uuid_package.Uuid uuid,
   }) : _createSession = createSession,
        _sendMessage = sendMessage,
@@ -39,6 +50,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
        _validateChatConsistency = validateChatConsistency,
        _generateSummary = generateSummary,
        _chatRepository = chatRepository,
+       _summarizationService = summarizationService,
+       _getUserPreferences = getUserPreferences,
+       _getRecordings = getRecordings,
        _uuid = uuid,
        super(const ChatInitial()) {
     
@@ -50,6 +64,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<RegenerateResponse>(_onRegenerateResponse);
     on<ChangeModel>(_onChangeModel);
     on<GenerateSummary>(_onGenerateSummary);
+    on<CheckSummaryStatus>(_onCheckSummaryStatus);
+    on<GenerateSummaryOnDemand>(_onGenerateSummaryOnDemand);
     on<CopyMessage>(_onCopyMessage);
     on<DeleteMessage>(_onDeleteMessage);
     on<RefreshSession>(_onRefreshSession);
@@ -83,13 +99,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           // Get total message count for pagination
           final totalMessages = await _getTotalMessageCount(session.id);
           
+          // Check summary status
+          final summaryStateResult = await _summarizationService.getSummarizationState(event.recordingId);
+          final summaryState = summaryStateResult.fold(
+            (failure) => null,
+            (state) => state,
+          );
+          
           emit(ChatLoaded(
             session: session,
             messages: messages,
             selectedModel: session.defaultModel,
             hasMoreMessages: messages.length < totalMessages,
             totalMessages: totalMessages,
+            summarizationState: summaryState,
           ));
+          
+          // If no summary exists and session doesn't have summary, trigger on-demand summarization
+          if (!session.hasSummary && (summaryState == null || summaryState.isPending)) {
+            _triggerOnDemandSummarization(event.recordingId);
+          }
+          
           return;
         }
       }
@@ -98,13 +128,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final createResult = await _createSession(event.recordingId);
       createResult.fold(
         (failure) => emit(ChatError(failure.message ?? 'Failed to create chat session')),
-        (session) => emit(ChatLoaded(
-          session: session,
-          messages: session.messages,
-          selectedModel: session.defaultModel,
-          hasMoreMessages: false,
-          totalMessages: session.messages.length,
-        )),
+        (session) {
+          emit(ChatLoaded(
+            session: session,
+            messages: session.messages,
+            selectedModel: session.defaultModel,
+            hasMoreMessages: false,
+            totalMessages: session.messages.length,
+          ));
+          
+          // Trigger on-demand summarization for new session
+          _triggerOnDemandSummarization(event.recordingId);
+        },
       );
     } catch (e) {
       emit(ChatError('Failed to load chat session: $e'));
@@ -325,7 +360,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       result.fold(
         (failure) => emit(ChatError(failure.message ?? 'Failed to generate summary')),
         (summary) {
-          emit(SummaryGenerated(summary));
+          emit(SummaryGenerated(
+            summary: summary,
+            summarizationState: SummarizationState(
+              recordingId: currentState.session.recordingId,
+              status: SummarizationStatus.completed,
+              retryAttempts: 0,
+              generatedSummary: summary,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          ));
           // Reload session to get updated summary
           _addEvent(RefreshSession());
         },
@@ -426,6 +471,125 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     final currentState = state as ChatLoaded;
     emit(currentState.copyWith(isTyping: false));
+  }
+
+  void _onCheckSummaryStatus(
+    CheckSummaryStatus event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+
+    try {
+      final summaryStateResult = await _summarizationService.getSummarizationState(event.recordingId);
+      summaryStateResult.fold(
+        (failure) => emit(ChatError(failure.message ?? 'Failed to check summary status')),
+        (summaryState) {
+          emit(currentState.copyWith(summarizationState: summaryState));
+          
+          // If summary is pending and session doesn't have summary, trigger summarization
+          if (summaryState != null && summaryState.isPending && !currentState.session.hasSummary) {
+            _triggerOnDemandSummarization(event.recordingId);
+          }
+        },
+      );
+    } catch (e) {
+      emit(ChatError('Failed to check summary status: $e'));
+    }
+  }
+
+  void _onGenerateSummaryOnDemand(
+    GenerateSummaryOnDemand event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is! ChatLoaded) return;
+
+    final currentState = state as ChatLoaded;
+
+    try {
+      final result = await _summarizationService.generateSummaryOnDemand(
+        recordingId: event.recordingId,
+        transcript: event.transcript,
+        model: event.model,
+        language: event.language,
+      );
+
+      result.fold(
+        (failure) => emit(SummaryFailed(
+          error: failure.message ?? 'Failed to generate summary',
+          summarizationState: SummarizationState(
+            recordingId: event.recordingId,
+            status: SummarizationStatus.failed,
+            retryAttempts: 0,
+            error: failure.message,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        )),
+        (summaryState) {
+          if (summaryState.isCompleted) {
+            emit(SummaryGenerated(
+              summary: summaryState.generatedSummary!,
+              summarizationState: summaryState,
+            ));
+            // Refresh session to get updated summary
+            _addEvent(RefreshSession());
+          } else if (summaryState.isGenerating) {
+            emit(SummaryGenerating(
+              recordingId: event.recordingId,
+              summarizationState: summaryState,
+            ));
+          }
+        },
+      );
+    } catch (e) {
+      emit(ChatError('Failed to generate summary on demand: $e'));
+    }
+  }
+
+  /// Trigger on-demand summarization
+  void _triggerOnDemandSummarization(String recordingId) async {
+    try {
+      // Get recording to access transcript
+      final recordingsResult = await _getRecordings(NoParams());
+      if (recordingsResult.isLeft()) {
+        print('Failed to get recordings for summarization');
+        return;
+      }
+
+      final recordings = recordingsResult.fold(
+        (l) => throw Exception('Unexpected left value'),
+        (r) => r,
+      );
+
+      final recording = recordings.firstWhere(
+        (r) => r.id == recordingId,
+        orElse: () => throw Exception('Recording not found'),
+      );
+
+      if (recording.transcript == null || recording.transcript!.isEmpty) {
+        print('No transcript available for summarization');
+        return;
+      }
+
+      // Get user preferences for language
+      final userPrefsResult = await _getUserPreferences(NoParams());
+      final language = userPrefsResult.fold(
+        (failure) => 'en', // Default to English if failed
+        (preferences) => preferences.language,
+      );
+
+      // Trigger summarization
+      add(GenerateSummaryOnDemand(
+        recordingId: recordingId,
+        transcript: recording.transcript!,
+        model: 'gpt-4o', // Default model for summaries
+        language: language,
+      ));
+    } catch (e) {
+      print('Error triggering on-demand summarization: $e');
+    }
   }
 
   // Helper method to add events

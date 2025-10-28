@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../../../domain/entities/chat_session.dart';
 import '../../../../domain/entities/chat_message.dart';
+import '../../../../domain/entities/summarization_state.dart';
 
 abstract class ChatState extends Equatable {
   const ChatState();
@@ -28,6 +29,7 @@ class ChatLoaded extends ChatState {
   final bool hasMoreMessages;
   final int totalMessages;
   final bool isConsistencyValid;
+  final SummarizationState? summarizationState;
 
   const ChatLoaded({
     required this.session,
@@ -40,6 +42,7 @@ class ChatLoaded extends ChatState {
     this.hasMoreMessages = true,
     this.totalMessages = 0,
     this.isConsistencyValid = true,
+    this.summarizationState,
   });
 
   @override
@@ -54,6 +57,7 @@ class ChatLoaded extends ChatState {
         hasMoreMessages,
         totalMessages,
         isConsistencyValid,
+        summarizationState,
       ];
 
   ChatLoaded copyWith({
@@ -67,6 +71,7 @@ class ChatLoaded extends ChatState {
     bool? hasMoreMessages,
     int? totalMessages,
     bool? isConsistencyValid,
+    SummarizationState? summarizationState,
   }) {
     return ChatLoaded(
       session: session ?? this.session,
@@ -79,6 +84,7 @@ class ChatLoaded extends ChatState {
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
       totalMessages: totalMessages ?? this.totalMessages,
       isConsistencyValid: isConsistencyValid ?? this.isConsistencyValid,
+      summarizationState: summarizationState ?? this.summarizationState,
     );
   }
 }
@@ -92,13 +98,43 @@ class ChatError extends ChatState {
   List<Object> get props => [message];
 }
 
-class SummaryGenerated extends ChatState {
-  final String summary;
+class SummaryGenerating extends ChatState {
+  final String recordingId;
+  final SummarizationState summarizationState;
 
-  const SummaryGenerated(this.summary);
+  const SummaryGenerating({
+    required this.recordingId,
+    required this.summarizationState,
+  });
 
   @override
-  List<Object> get props => [summary];
+  List<Object> get props => [recordingId, summarizationState];
+}
+
+class SummaryGenerated extends ChatState {
+  final String summary;
+  final SummarizationState summarizationState;
+
+  const SummaryGenerated({
+    required this.summary,
+    required this.summarizationState,
+  });
+
+  @override
+  List<Object> get props => [summary, summarizationState];
+}
+
+class SummaryFailed extends ChatState {
+  final String error;
+  final SummarizationState summarizationState;
+
+  const SummaryFailed({
+    required this.error,
+    required this.summarizationState,
+  });
+
+  @override
+  List<Object> get props => [error, summarizationState];
 }
 
 class MessageCopied extends ChatState {

@@ -521,3 +521,166 @@ class ChatSessionRealm extends _ChatSessionRealm
   @override
   SchemaObject get objectSchema => RealmObjectBase.getSchema(this) ?? schema;
 }
+
+class SummarizationStateRealm extends _SummarizationStateRealm
+    with RealmEntity, RealmObjectBase, RealmObject {
+  SummarizationStateRealm(
+    String recordingId,
+    String status,
+    int retryAttempts,
+    DateTime createdAt,
+    DateTime updatedAt, {
+    String? error,
+    DateTime? lastAttempt,
+    String? generatedSummary,
+  }) {
+    RealmObjectBase.set(this, 'recordingId', recordingId);
+    RealmObjectBase.set(this, 'status', status);
+    RealmObjectBase.set(this, 'retryAttempts', retryAttempts);
+    RealmObjectBase.set(this, 'error', error);
+    RealmObjectBase.set(this, 'lastAttempt', lastAttempt);
+    RealmObjectBase.set(this, 'generatedSummary', generatedSummary);
+    RealmObjectBase.set(this, 'createdAt', createdAt);
+    RealmObjectBase.set(this, 'updatedAt', updatedAt);
+  }
+
+  SummarizationStateRealm._();
+
+  @override
+  String get recordingId =>
+      RealmObjectBase.get<String>(this, 'recordingId') as String;
+  @override
+  set recordingId(String value) =>
+      RealmObjectBase.set(this, 'recordingId', value);
+
+  @override
+  String get status => RealmObjectBase.get<String>(this, 'status') as String;
+  @override
+  set status(String value) => RealmObjectBase.set(this, 'status', value);
+
+  @override
+  int get retryAttempts =>
+      RealmObjectBase.get<int>(this, 'retryAttempts') as int;
+  @override
+  set retryAttempts(int value) =>
+      RealmObjectBase.set(this, 'retryAttempts', value);
+
+  @override
+  String? get error => RealmObjectBase.get<String>(this, 'error') as String?;
+  @override
+  set error(String? value) => RealmObjectBase.set(this, 'error', value);
+
+  @override
+  DateTime? get lastAttempt =>
+      RealmObjectBase.get<DateTime>(this, 'lastAttempt') as DateTime?;
+  @override
+  set lastAttempt(DateTime? value) =>
+      RealmObjectBase.set(this, 'lastAttempt', value);
+
+  @override
+  String? get generatedSummary =>
+      RealmObjectBase.get<String>(this, 'generatedSummary') as String?;
+  @override
+  set generatedSummary(String? value) =>
+      RealmObjectBase.set(this, 'generatedSummary', value);
+
+  @override
+  DateTime get createdAt =>
+      RealmObjectBase.get<DateTime>(this, 'createdAt') as DateTime;
+  @override
+  set createdAt(DateTime value) =>
+      RealmObjectBase.set(this, 'createdAt', value);
+
+  @override
+  DateTime get updatedAt =>
+      RealmObjectBase.get<DateTime>(this, 'updatedAt') as DateTime;
+  @override
+  set updatedAt(DateTime value) =>
+      RealmObjectBase.set(this, 'updatedAt', value);
+
+  @override
+  Stream<RealmObjectChanges<SummarizationStateRealm>> get changes =>
+      RealmObjectBase.getChanges<SummarizationStateRealm>(this);
+
+  @override
+  Stream<RealmObjectChanges<SummarizationStateRealm>> changesFor([
+    List<String>? keyPaths,
+  ]) => RealmObjectBase.getChangesFor<SummarizationStateRealm>(this, keyPaths);
+
+  @override
+  SummarizationStateRealm freeze() =>
+      RealmObjectBase.freezeObject<SummarizationStateRealm>(this);
+
+  EJsonValue toEJson() {
+    return <String, dynamic>{
+      'recordingId': recordingId.toEJson(),
+      'status': status.toEJson(),
+      'retryAttempts': retryAttempts.toEJson(),
+      'error': error.toEJson(),
+      'lastAttempt': lastAttempt.toEJson(),
+      'generatedSummary': generatedSummary.toEJson(),
+      'createdAt': createdAt.toEJson(),
+      'updatedAt': updatedAt.toEJson(),
+    };
+  }
+
+  static EJsonValue _toEJson(SummarizationStateRealm value) => value.toEJson();
+  static SummarizationStateRealm _fromEJson(EJsonValue ejson) {
+    if (ejson is! Map<String, dynamic>) return raiseInvalidEJson(ejson);
+    return switch (ejson) {
+      {
+        'recordingId': EJsonValue recordingId,
+        'status': EJsonValue status,
+        'retryAttempts': EJsonValue retryAttempts,
+        'createdAt': EJsonValue createdAt,
+        'updatedAt': EJsonValue updatedAt,
+      } =>
+        SummarizationStateRealm(
+          fromEJson(recordingId),
+          fromEJson(status),
+          fromEJson(retryAttempts),
+          fromEJson(createdAt),
+          fromEJson(updatedAt),
+          error: fromEJson(ejson['error']),
+          lastAttempt: fromEJson(ejson['lastAttempt']),
+          generatedSummary: fromEJson(ejson['generatedSummary']),
+        ),
+      _ => raiseInvalidEJson(ejson),
+    };
+  }
+
+  static final schema = () {
+    RealmObjectBase.registerFactory(SummarizationStateRealm._);
+    register(_toEJson, _fromEJson);
+    return const SchemaObject(
+      ObjectType.realmObject,
+      SummarizationStateRealm,
+      'SummarizationStateRealm',
+      [
+        SchemaProperty(
+          'recordingId',
+          RealmPropertyType.string,
+          primaryKey: true,
+        ),
+        SchemaProperty('status', RealmPropertyType.string),
+        SchemaProperty('retryAttempts', RealmPropertyType.int),
+        SchemaProperty('error', RealmPropertyType.string, optional: true),
+        SchemaProperty(
+          'lastAttempt',
+          RealmPropertyType.timestamp,
+          optional: true,
+        ),
+        SchemaProperty(
+          'generatedSummary',
+          RealmPropertyType.string,
+          optional: true,
+        ),
+        SchemaProperty('createdAt', RealmPropertyType.timestamp),
+        SchemaProperty('updatedAt', RealmPropertyType.timestamp),
+      ],
+    );
+  }();
+
+  @override
+  SchemaObject get objectSchema => RealmObjectBase.getSchema(this) ?? schema;
+}

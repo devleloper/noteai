@@ -6,6 +6,7 @@ import '../../../core/errors/exceptions.dart';
 import '../../../domain/entities/chat_message.dart';
 
 abstract class RealmDataSource {
+  Realm get realm;
   Future<void> saveRecording(RecordingModel recording);
   Future<List<RecordingModel>> getRecordings();
   Future<RecordingModel?> getRecording(String id);
@@ -42,6 +43,7 @@ class RealmDataSourceImpl implements RealmDataSource {
         RecordingRealm.schema,
         ChatSessionRealm.schema,
         ChatMessageRealm.schema,
+        SummarizationStateRealm.schema,
       ], path: realmPath);
       
       _realm = Realm(config);
