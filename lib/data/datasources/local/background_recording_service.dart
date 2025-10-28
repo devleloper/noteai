@@ -74,33 +74,6 @@ class BackgroundRecordingService {
     }
   }
 
-  Future<void> pauseBackgroundRecording() async {
-    try {
-      if (_audioService != null) {
-        await _audioService!.pauseRecording();
-        _recordingTimer?.cancel();
-      }
-    } catch (e) {
-      throw RecordingException('Failed to pause background recording: $e');
-    }
-  }
-
-  Future<void> resumeBackgroundRecording() async {
-    try {
-      if (_audioService != null) {
-        await _audioService!.resumeRecording();
-        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          _recordingDuration = Duration(seconds: timer.tick);
-          _recordingController?.add(RecordingData(
-            duration: _recordingDuration,
-            amplitude: _getRandomAmplitude(),
-          ));
-        });
-      }
-    } catch (e) {
-      throw RecordingException('Failed to resume background recording: $e');
-    }
-  }
 
   Future<String> stopBackgroundRecording() async {
     try {

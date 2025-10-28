@@ -8,6 +8,12 @@ abstract class FirebaseDataSource {
   Future<RecordingModel?> getRecording(String id);
   Future<void> deleteRecording(String id);
   Future<void> updateRecording(RecordingModel recording);
+  
+  // Chat session methods
+  Future<void> uploadChatSession(Map<String, dynamic> session);
+  Future<void> updateChatSession(String sessionId, Map<String, dynamic> session);
+  Future<void> deleteChatSession(String sessionId);
+  Future<Map<String, dynamic>?> getChatSession(String sessionId);
 }
 
 class FirebaseDataSourceImpl implements FirebaseDataSource {
@@ -18,31 +24,153 @@ class FirebaseDataSourceImpl implements FirebaseDataSource {
   
   @override
   Future<void> uploadRecording(RecordingModel recording) async {
-    // TODO: Implement Firebase upload operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final docRef = firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(recording.id);
+    
+    await docRef.set(recording.toMap());
   }
   
   @override
   Future<List<RecordingModel>> getRecordings() async {
-    // TODO: Implement Firebase query operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final querySnapshot = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .orderBy('createdAt', descending: true)
+        .get();
+    
+    return querySnapshot.docs
+        .map((doc) => RecordingModel.fromMap(doc.data(), doc.id))
+        .toList();
   }
   
   @override
   Future<RecordingModel?> getRecording(String id) async {
-    // TODO: Implement Firebase query by ID operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final doc = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(id)
+        .get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+    
+    return RecordingModel.fromMap(doc.data()!, doc.id);
   }
   
   @override
   Future<void> deleteRecording(String id) async {
-    // TODO: Implement Firebase delete operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(id)
+        .delete();
   }
   
   @override
   Future<void> updateRecording(RecordingModel recording) async {
-    // TODO: Implement Firebase update operation
-    throw UnimplementedError();
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('recordings')
+        .doc(recording.id)
+        .update(recording.toMap());
+  }
+
+  @override
+  Future<void> uploadChatSession(Map<String, dynamic> session) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final docRef = firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(session['id']);
+    
+    await docRef.set(session);
+  }
+
+  @override
+  Future<void> updateChatSession(String sessionId, Map<String, dynamic> session) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .update(session);
+  }
+
+  @override
+  Future<void> deleteChatSession(String sessionId) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .delete();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getChatSession(String sessionId) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    final doc = await firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('chat_sessions')
+        .doc(sessionId)
+        .get();
+    
+    if (doc.exists) {
+      return doc.data();
+    }
+    return null;
   }
 }

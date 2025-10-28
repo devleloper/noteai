@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/recording_bloc.dart';
 import '../bloc/recording_event.dart';
 import '../bloc/recording_state.dart';
-import '../../../../core/utils/service_locator.dart' as di;
-import '../../../../data/datasources/local/audio_recording_service.dart';
+import 'stealth_recording_screen.dart';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -16,36 +15,21 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen> {
   final TextEditingController _titleController = TextEditingController();
-  late final AudioRecordingService _audioService;
-  StreamSubscription<RecordingData>? _recordingSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _audioService = di.sl<AudioRecordingService>();
-  }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _recordingSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black87,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Recording'),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Recording',
-          style: TextStyle(color: Colors.white),
         ),
       ),
       body: BlocConsumer<RecordingBloc, RecordingState>(
@@ -58,116 +42,119 @@ class _RecordingScreenState extends State<RecordingScreen> {
               ),
             );
           } else if (state is RecordingCompleted) {
-            Navigator.of(context).pop();
+            // Add small delay to ensure RecordingsLoaded is processed before navigation
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted && Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            });
+          } else if (state is StealthActivating) {
+            // Navigate to stealth screen when activation starts
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const StealthRecordingScreen(),
+              ),
+            );
           }
         },
         builder: (context, state) {
           return SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(32.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Recording Status
                   Text(
                     _getStatusText(state),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Waveform Visualization
-                  Container(
-                    height: 100,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: _buildWaveformVisualizer(state),
+                    textAlign: TextAlign.center,
                   ),
                   
                   const SizedBox(height: 48),
                   
-                  // Recording Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Stop Button
-                      if (state is RecordingInProgress || state is RecordingPaused)
-                        _buildControlButton(
-                          icon: Icons.stop,
-                          color: Colors.red,
-                          onPressed: () {
-                            if (state is RecordingInProgress) {
-                              context.read<RecordingBloc>().add(
-                                StopRecordingRequested((state as RecordingInProgress).recordingId),
-                              );
-                            } else if (state is RecordingPaused) {
-                              context.read<RecordingBloc>().add(
-                                StopRecordingRequested((state as RecordingPaused).recordingId),
-                              );
-                            }
-                          },
+                  // Recording Icon Button with Long Press Support
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => _handleMainAction(state),
+                      onLongPressStart: (_) => _handleLongPressStart(state),
+                      onLongPressEnd: (_) => _handleLongPressEnd(),
+                      onLongPressCancel: _handleLongPressCancel,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: state is RecordingInProgress 
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (state is RecordingInProgress 
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary).withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
                         ),
-                      
-                      // Main Record/Pause Button
-                      _buildMainControlButton(state),
-                      
-                      // Options Button
-                      _buildControlButton(
-                        icon: Icons.more_vert,
-                        color: Colors.white,
-                        onPressed: () => _showRecordingOptions(context),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Recording Info
-                  if (state is RecordingInProgress || state is RecordingPaused)
-                    Text(
-                      'Duration: ${_formatDuration(_getDuration(state))}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 18,
+                        child: Icon(
+                          state is RecordingInProgress ? Icons.stop : Icons.mic,
+                          size: 60,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                  ),
+                  
+                  const SizedBox(height: 48),
+                  
+                  // Recording Info
+                  if (state is RecordingInProgress) ...[
+                    Text(
+                      'Duration: ${_formatDuration(state.duration)}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Recording in progress...',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  
+                  // Instruction Text
+                  Text(
+                    state is RecordingInProgress 
+                        ? 'Tap the red button to stop recording'
+                        : 'Tap to start recording • Long-press for stealth mode',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   
                   const SizedBox(height: 48),
                   
                   // Title Input (only show when not recording)
-                  if (state is! RecordingInProgress && state is! RecordingPaused)
-                    Column(
-                      children: [
-                        TextField(
-                          controller: _titleController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Enter recording title...',
-                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white54),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white54),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white),
-                            ),
-                          ),
+                  if (state is! RecordingInProgress) ...[
+                    TextField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter recording title (optional)...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 24),
-                      ],
+                        prefixIcon: const Icon(Icons.title),
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -177,134 +164,38 @@ class _RecordingScreenState extends State<RecordingScreen> {
     );
   }
 
-  Widget _buildControlButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return IconButton(
-      icon: Icon(icon, size: 48, color: color),
-      onPressed: onPressed,
-    );
-  }
-
-  Widget _buildMainControlButton(RecordingState state) {
+  void _handleMainAction(RecordingState state) {
     if (state is RecordingInProgress) {
-      return GestureDetector(
-        onTap: () {
-          context.read<RecordingBloc>().add(
-            PauseRecordingRequested((state as RecordingInProgress).recordingId),
-          );
-        },
-        child: Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.orange,
-          ),
-          child: const Icon(
-            Icons.pause,
-            color: Colors.white,
-            size: 40,
-          ),
-        ),
-      );
-    } else if (state is RecordingPaused) {
-      return GestureDetector(
-        onTap: () {
-          context.read<RecordingBloc>().add(
-            ResumeRecordingRequested((state as RecordingPaused).recordingId),
-          );
-        },
-        child: Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.red,
-          ),
-          child: const Icon(
-            Icons.mic,
-            color: Colors.white,
-            size: 40,
-          ),
-        ),
+      // Stop recording
+      context.read<RecordingBloc>().add(
+        StopRecordingRequested(state.recordingId),
       );
     } else {
-      return GestureDetector(
-        onTap: () {
-          if (_titleController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please enter a recording title'),
-              ),
-            );
-            return;
-          }
-          
-          context.read<RecordingBloc>().add(
-            StartRecordingRequested(_titleController.text.trim()),
-          );
-        },
-        child: Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.red,
-          ),
-          child: const Icon(
-            Icons.mic,
-            color: Colors.white,
-            size: 40,
-          ),
-        ),
+      // Start recording
+      context.read<RecordingBloc>().add(
+        StartRecordingRequested(_titleController.text.trim()),
       );
     }
   }
 
-  Widget _buildWaveformVisualizer(RecordingState state) {
-    if (state is RecordingInProgress) {
-      return StreamBuilder<RecordingData>(
-        stream: _audioService.recordingStream,
-        builder: (context, snapshot) {
-          final amplitude = snapshot.data?.amplitude ?? 0.0;
-          return Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(20, (index) {
-                final height = 20 + (amplitude * 30);
-                return Container(
-                  width: 3,
-                  height: height,
-                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                );
-              }),
-            ),
-          );
-        },
-      );
-    } else {
-      return const Center(
-        child: Icon(
-          Icons.mic,
-          color: Colors.white54,
-          size: 48,
-        ),
-      );
+  void _handleLongPressStart(RecordingState state) {
+    if (state is! RecordingInProgress && state is! RecordingLoading) {
+      HapticFeedback.lightImpact();
     }
+  }
+
+  void _handleLongPressEnd() {
+    // Long press completed - activate stealth mode
+    context.read<RecordingBloc>().add(const StealthModeRequested());
+  }
+
+  void _handleLongPressCancel() {
+    // Long press cancelled - do nothing
   }
 
   String _getStatusText(RecordingState state) {
     if (state is RecordingInProgress) {
       return 'Recording...';
-    } else if (state is RecordingPaused) {
-      return 'Paused';
     } else if (state is RecordingLoading) {
       return 'Starting...';
     } else {
@@ -312,50 +203,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
     }
   }
 
-  Duration _getDuration(RecordingState state) {
-    if (state is RecordingInProgress) {
-      return state.duration;
-    } else if (state is RecordingPaused) {
-      return state.duration;
-    }
-    return Duration.zero;
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
-  }
-
-  void _showRecordingOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.grey[900],
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.white),
-              title: const Text('Recording Settings', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to settings
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info, color: Colors.white),
-              title: const Text('Recording Info', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Show recording info
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

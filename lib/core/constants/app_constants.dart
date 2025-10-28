@@ -6,7 +6,7 @@ class AppConstants {
   static String get openAIOrgId => dotenv.env['OPENAI_ORG_ID'] ?? '';
   static const String openAIBaseUrl = 'https://api.openai.com/v1';
   static const String whisperModel = 'whisper-1';
-  static const String gptModel = 'gpt-3.5-turbo';
+  static const String gptModel = 'gpt-4o';
   
   // Audio Configuration
   static const int maxChunkSizeMB = 25; // OpenAI limit

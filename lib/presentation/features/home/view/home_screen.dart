@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../domain/entities/recording.dart';
+import '../../../../core/utils/date_grouping_utils.dart';
 import '../../recording/bloc/recording_bloc.dart';
 import '../../recording/bloc/recording_event.dart';
 import '../../recording/bloc/recording_state.dart';
 import '../../recording/view/recording_screen.dart';
+import '../../search/view/search_screen.dart';
+import '../../settings/view/settings_screen.dart';
 import '../widgets/recording_card.dart';
+import '../widgets/date_header_widget.dart';
+import '../../../widgets/sync/sync_status_indicator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,29 +30,57 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NoteAI'),
+        title: Row(
+          children: [
+            const SyncStatusIndicator(showDetails: false),
+            const SizedBox(width: 12),
+            const Text('NoteAI'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search functionality
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // TODO: Navigate to settings
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
           ),
         ],
       ),
-      body: BlocBuilder<RecordingBloc, RecordingState>(
+      body: BlocConsumer<RecordingBloc, RecordingState>(
+        listener: (context, state) {
+          // Remove redundant LoadRecordingsRequested call to prevent race condition
+          // The RecordingBloc already emits RecordingsLoaded after RecordingCompleted
+        },
         builder: (context, state) {
           if (state is RecordingLoading) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           } else if (state is RecordingsLoaded) {
+            if (state.recordings.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            return _buildRecordingsList(context, state.recordings);
+          } else if (state is TranscriptionPending) {
+            if (state.recordings.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            return _buildRecordingsList(context, state.recordings);
+          } else if (state is TranscriptionProcessing) {
             if (state.recordings.isEmpty) {
               return _buildEmptyState(context);
             }
@@ -116,26 +150,107 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecordingsList(BuildContext context, recordings) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<RecordingBloc>().add(LoadRecordingsRequested());
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: recordings.length,
-        itemBuilder: (context, index) {
-          final recording = recordings[index];
-          return RecordingCard(
-            recording: recording,
-            onTap: () {
-              // TODO: Navigate to recording detail
-            },
-            onDelete: () {
-              _showDeleteDialog(context, recording.id);
-            },
+  Widget _buildRecordingsList(BuildContext context, List<Recording> recordings) {
+    // Group recordings by date
+    final groupedItems = DateGroupingUtils.groupRecordingsByDate(recordings);
+    
+    return BlocListener<RecordingBloc, RecordingState>(
+      listener: (context, state) {
+        if (state is TranscriptionCompleted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transcription completed successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
+        } else if (state is TranscriptionError) {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Transcription failed: ${state.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else if (state is RecordingRenamed) {
+          // Show rename success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Recording renamed to "${state.newTitle}"'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is RecordingRenameError) {
+          // Show rename error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to rename recording: ${state.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: RefreshIndicator(
+        onRefresh: () async {
+          context.read<RecordingBloc>().add(LoadRecordingsRequested());
         },
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: groupedItems.length,
+          itemBuilder: (context, index) {
+            final item = groupedItems[index];
+            
+            if (item.isDateHeader) {
+              return DateHeaderWidget(dateHeader: item as DateHeaderItem);
+            } else if (item.isRecording) {
+              final recording = (item as RecordingItem).recording;
+              return BlocBuilder<RecordingBloc, RecordingState>(
+                builder: (context, state) {
+                  // Get the most up-to-date recording from the current state
+                  Recording? updatedRecording;
+                  if (state is RecordingsLoaded) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else if (state is TranscriptionPending) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else if (state is TranscriptionProcessing) {
+                    updatedRecording = state.recordings.firstWhere(
+                      (r) => r.id == recording.id,
+                      orElse: () => recording,
+                    );
+                  } else {
+                    updatedRecording = recording;
+                  }
+                  
+                  return RecordingCard(
+                    recording: updatedRecording!,
+                    onTap: () {
+                      // TODO: Navigate to recording detail
+                    },
+                    onDelete: () {
+                      _showDeleteDialog(context, updatedRecording!.id);
+                    },
+                    onRename: (newTitle) {
+                      context.read<RecordingBloc>().add(
+                        RenameRecordingRequested(
+                          recordingId: updatedRecording!.id,
+                          newTitle: newTitle,
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            }
+            
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }

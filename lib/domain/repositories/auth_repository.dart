@@ -8,4 +8,5 @@ abstract class AuthRepository {
   Future<Either<Failure, User?>> getCurrentUser();
   Future<Either<Failure, bool>> isSignedIn();
   Future<Either<Failure, void>> updateUserPreferences(UserPreferences preferences);
+  Future<Either<Failure, UserPreferences>> getCurrentUserPreferences();
 }

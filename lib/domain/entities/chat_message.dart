@@ -1,53 +1,63 @@
 import 'package:equatable/equatable.dart';
 
+enum MessageType {
+  user,
+  ai,
+  system,
+}
+
 class ChatMessage extends Equatable {
   final String id;
-  final String recordingId;
+  final String sessionId;
+  final MessageType type;
   final String content;
-  final ChatMessageRole role;
-  final DateTime createdAt;
-  final bool isSynced;
-  
+  final String? model; // AI model used for generation
+  final DateTime timestamp;
+  final String? parentMessageId; // For replies
+  final Map<String, dynamic>? metadata;
+
   const ChatMessage({
     required this.id,
-    required this.recordingId,
+    required this.sessionId,
+    required this.type,
     required this.content,
-    required this.role,
-    required this.createdAt,
-    required this.isSynced,
+    this.model,
+    required this.timestamp,
+    this.parentMessageId,
+    this.metadata,
   });
-  
+
   @override
-  List<Object> get props => [
-    id,
-    recordingId,
-    content,
-    role,
-    createdAt,
-    isSynced,
-  ];
-  
+  List<Object?> get props => [
+        id,
+        sessionId,
+        type,
+        content,
+        model,
+        timestamp,
+        parentMessageId,
+        metadata,
+      ];
+
   ChatMessage copyWith({
     String? id,
-    String? recordingId,
+    String? sessionId,
+    MessageType? type,
     String? content,
-    ChatMessageRole? role,
-    DateTime? createdAt,
-    bool? isSynced,
+    String? model,
+    DateTime? timestamp,
+    String? parentMessageId,
+    Map<String, dynamic>? metadata,
   }) {
     return ChatMessage(
       id: id ?? this.id,
-      recordingId: recordingId ?? this.recordingId,
+      sessionId: sessionId ?? this.sessionId,
+      type: type ?? this.type,
       content: content ?? this.content,
-      role: role ?? this.role,
-      createdAt: createdAt ?? this.createdAt,
-      isSynced: isSynced ?? this.isSynced,
+      model: model ?? this.model,
+      timestamp: timestamp ?? this.timestamp,
+      parentMessageId: parentMessageId ?? this.parentMessageId,
+      metadata: metadata ?? this.metadata,
     );
   }
-}
-
-enum ChatMessageRole {
-  user,
-  assistant,
-  system,
 }

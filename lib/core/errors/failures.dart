@@ -40,3 +40,19 @@ class AISummaryFailure extends Failure {
 class AIChatFailure extends Failure {
   const AIChatFailure(super.message);
 }
+
+class DatabaseFailure extends Failure {
+  const DatabaseFailure(super.message);
+}
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure(super.message);
+}
+
+class ValidationFailure extends Failure {
+  const ValidationFailure(super.message);
+}
+
+class AIFailure extends Failure {
+  const AIFailure(super.message);
+}

@@ -31,6 +31,7 @@ dependencies:
   record: ^6.1.1
   audioplayers: ^6.1.0
   permission_handler: ^12.0.1
+  wakelock_plus: ^1.2.8
   
   # Background Processing
   # workmanager: ^0.5.2  # Temporarily disabled due to build issues
@@ -47,6 +48,15 @@ dependencies:
   
   # AI Integration
   flutter_dotenv: ^6.0.0
+  just_audio: ^0.10.5
+  
+  # Markdown & LaTeX Rendering
+  flutter_markdown: ^0.6.18+2
+  flutter_math_fork: ^0.7.2
+  
+  # UUID generation
+  uuid: ^4.5.1
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -55,9 +65,21 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   bloc_test: ^9.1.7
   mockito: ^5.4.4
+  flutter_launcher_icons: ^0.14.4
 flutter:
 
   uses-material-design: true
 
   assets:
+    - assets/images/brand/logo.png
     - .env
+  
+flutter_launcher_icons:
+  adaptive_icon_background: "#1D74CD"
+  adaptive_icon_foreground: "assets/images/brand/logo.png"
+  min_sdk_android: 23
+  android: true
+  ios: true
+  image_path_android: "assets/images/brand/logo.png"
+  image_path_ios: "assets/images/brand/logo.png"
+  remove_alpha_ios: true

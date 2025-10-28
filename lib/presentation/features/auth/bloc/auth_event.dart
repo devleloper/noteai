@@ -21,3 +21,7 @@ class AuthUserChanged extends AuthEvent {
   @override
   List<Object> get props => [userId ?? ''];
 }
+
+class AuthRefreshUserRequested extends AuthEvent {
+  const AuthRefreshUserRequested();
+}

@@ -37,7 +37,11 @@ class AIRepositoryImpl implements AIRepository {
   @override
   Future<Either<Failure, Summary>> generateSummary(String transcript, UserPreferences preferences) async {
     try {
-      final summaryText = await openAIDataSource.generateSummary(transcript);
+      final summaryText = await openAIDataSource.generateSummary(
+        transcript: transcript,
+        model: 'gpt-4o',
+        language: preferences.language,
+      );
       final summary = Summary(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         recordingId: 'mock_recording_id',
@@ -57,7 +61,7 @@ class AIRepositoryImpl implements AIRepository {
   Future<Either<Failure, String>> askQuestion(String recordingId, String question, List<ChatMessage> context) async {
     try {
       // Build context from chat messages
-      final contextText = context.map((msg) => '${msg.role}: ${msg.content}').join('\n');
+      final contextText = context.map((msg) => '${msg.type.name}: ${msg.content}').join('\n');
       final answer = await openAIDataSource.askQuestion(question, contextText);
       return Right(answer);
     } catch (e) {

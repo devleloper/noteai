@@ -56,8 +56,8 @@ class AudioRecordingService {
       final fileName = '${title.replaceAll(' ', '_')}_$timestamp.m4a';
       _currentRecordingPath = '${recordingsDir.path}/$fileName';
 
-      // Initialize recording stream BEFORE starting recording
-      _recordingController = StreamController<RecordingData>.broadcast();
+      // Initialize recording stream BEFORE starting recording (only if not already initialized)
+      _recordingController ??= StreamController<RecordingData>.broadcast();
 
       // Start recording
       await _recorder.start(
@@ -87,26 +87,19 @@ class AudioRecordingService {
     }
   }
 
-  Future<void> pauseRecording() async {
-    // Record package doesn't support pause/resume
-    throw RecordingException('Pause/resume not supported by record package');
-  }
-
-  Future<void> resumeRecording() async {
-    // Record package doesn't support pause/resume
-    throw RecordingException('Pause/resume not supported by record package');
-  }
 
   Future<String> stopRecording() async {
     try {
       if (_isRecording) {
         final path = await _recorder.stop();
         _recordingTimer?.cancel();
-        _recordingController?.close();
+        // Don't close the controller here - let it be reused for next recording
+        // _recordingController?.close();
         
         _isRecording = false;
         _currentRecordingPath = null;
-        _recordingDuration = Duration.zero;
+        // Don't reset duration here - let the repository get the final duration
+        // _recordingDuration = Duration.zero;
         
         return path ?? _currentRecordingPath ?? '';
       }
@@ -134,10 +127,19 @@ class AudioRecordingService {
 
   Stream<RecordingData>? get recordingStream => _recordingController?.stream;
 
+  Duration get finalRecordingDuration => _recordingDuration;
+
+  void resetRecordingState() {
+    _recordingDuration = Duration.zero;
+  }
+
   double _getRandomAmplitude() {
-    // Placeholder for amplitude data
-    // In a real implementation, this would come from the audio recorder
-    return (DateTime.now().millisecond % 100) / 100.0;
+    // Generate more realistic amplitude values
+    // Simulate audio amplitude with some variation
+    final random = DateTime.now().millisecond / 1000.0;
+    final baseAmplitude = 0.3 + (random * 0.4); // Base between 0.3-0.7
+    final variation = (DateTime.now().microsecond % 100) / 1000.0; // Small variation
+    return (baseAmplitude + variation).clamp(0.0, 1.0);
   }
 
   Future<void> dispose() async {

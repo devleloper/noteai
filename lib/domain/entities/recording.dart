@@ -12,6 +12,11 @@ class Recording extends Equatable {
   final String? transcript;
   final String? summary;
   final bool isSynced;
+  final TranscriptionStatus transcriptionStatus;
+  final DateTime? transcriptionCompletedAt;
+  final String? transcriptionError;
+  final bool isRemote;
+  final String? deviceId;
   
   const Recording({
     required this.id,
@@ -25,6 +30,11 @@ class Recording extends Equatable {
     this.transcript,
     this.summary,
     required this.isSynced,
+    required this.transcriptionStatus,
+    this.transcriptionCompletedAt,
+    this.transcriptionError,
+    this.isRemote = false,
+    this.deviceId,
   });
   
   @override
@@ -40,6 +50,11 @@ class Recording extends Equatable {
     transcript,
     summary,
     isSynced,
+    transcriptionStatus,
+    transcriptionCompletedAt,
+    transcriptionError,
+    isRemote,
+    deviceId,
   ];
   
   Recording copyWith({
@@ -54,6 +69,11 @@ class Recording extends Equatable {
     String? transcript,
     String? summary,
     bool? isSynced,
+    TranscriptionStatus? transcriptionStatus,
+    DateTime? transcriptionCompletedAt,
+    String? transcriptionError,
+    bool? isRemote,
+    String? deviceId,
   }) {
     return Recording(
       id: id ?? this.id,
@@ -67,6 +87,11 @@ class Recording extends Equatable {
       transcript: transcript ?? this.transcript,
       summary: summary ?? this.summary,
       isSynced: isSynced ?? this.isSynced,
+      transcriptionStatus: transcriptionStatus ?? this.transcriptionStatus,
+      transcriptionCompletedAt: transcriptionCompletedAt ?? this.transcriptionCompletedAt,
+      transcriptionError: transcriptionError ?? this.transcriptionError,
+      isRemote: isRemote ?? this.isRemote,
+      deviceId: deviceId ?? this.deviceId,
     );
   }
 }
@@ -77,5 +102,13 @@ enum RecordingStatus {
   completed,
   processing,
   transcribed,
+  failed,
+}
+
+enum TranscriptionStatus {
+  notStarted,
+  pending,
+  processing,
+  completed,
   failed,
 }
