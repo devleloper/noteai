@@ -367,7 +367,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _launchLinkedIn(BuildContext context) async {
-    const url = 'https://www.linkedin.com/in/devlet-boltaev/';
+    const url = 'https://www.linkedin.com/in/devleloper/';
     final uri = Uri.parse(url);
     
     try {
